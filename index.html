@@ -542,8 +542,11 @@ function makeGradeCard(batter){
     rb.onclick=e=>{e.stopPropagation();batter.result=r;save();render();};
     rr.appendChild(rb);
   });
-  const del=el("button","btn-sm","🗑");del.style.marginLeft="auto";
-  del.onclick=e=>{e.stopPropagation();state.batters=state.batters.filter(b=>b.id!==batter.id);save();render();};
+  const editBtn=el("button","btn-sm","✏️ Edit");editBtn.style.marginLeft="auto";
+  editBtn.onclick=e=>{e.stopPropagation();batterForm={...batter};state.batters=state.batters.filter(b=>b.id!==batter.id);save();state.tab="add";render();};
+  rr.appendChild(editBtn);
+  const del=el("button","btn-sm","🗑");del.style.marginLeft="6px";
+  del.onclick=e=>{e.stopPropagation();if(confirm("Remove this pick?")){state.batters=state.batters.filter(b=>b.id!==batter.id);save();render();}};
   rr.appendChild(del);
   body.appendChild(rr);
 
@@ -715,9 +718,13 @@ function makePitcherCard(p){
     ${p.vsLHBhr9||p.vsRHBhr9?`<div style="font-size:11px;color:#2d4060;margin-top:2px">${p.vsLHBhr9?`HR/9 vs LHB: ${p.vsLHBhr9}`:""}${p.vsLHBhr9&&p.vsRHBhr9?" · ":""}${p.vsRHBhr9?`HR/9 vs RHB: ${p.vsRHBhr9}`:""}</div>`:""}
   `);
   info.style.flex="1";
-  const del=el("button","btn-sm","✕");
-  del.onclick=()=>{state.pitchers=state.pitchers.filter(x=>x.id!==p.id);save();render();};
-  card.appendChild(badge);card.appendChild(info);card.appendChild(del);
+  const btnWrap=el("div");btnWrap.style.cssText="display:flex;flex-direction:column;gap:5px;flex-shrink:0;";
+  const editP=el("button","btn-sm","✏️");
+  editP.onclick=()=>{pitcherForm={...p};state.pitchers=state.pitchers.filter(x=>x.id!==p.id);save();state.showPitcherForm=true;render();};
+  const delP=el("button","btn-sm","🗑");
+  delP.onclick=()=>{if(confirm("Remove pitcher?")){state.pitchers=state.pitchers.filter(x=>x.id!==p.id);save();render();}};
+  btnWrap.appendChild(editP);btnWrap.appendChild(delP);
+  card.appendChild(badge);card.appendChild(info);card.appendChild(btnWrap);
   return card;
 }
 
