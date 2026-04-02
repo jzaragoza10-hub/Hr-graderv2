@@ -761,8 +761,49 @@ function makePitcherForm(){
   return card;
 }
 
+// ── BACKUP / RESTORE ─────────────────────────────────────────────────────────
+function exportData(){
+  const data={batters:state.batters,pitchers:state.pitchers,weights:WEIGHTS};
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download="hr-grader-backup-"+new Date().toISOString().slice(0,10)+".json";
+  a.click();URL.revokeObjectURL(url);
+  showToast("✅ Backup saved!");
+}
+
+function importData(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.batters) state.batters=data.batters;
+      if(data.pitchers) state.pitchers=data.pitchers;
+      if(data.weights) WEIGHTS=data.weights;
+      save();render();
+      showToast("✅ Data restored!");
+    }catch(err){showToast("⚠️ Invalid backup file");}
+  };
+  reader.readAsText(file);
+}
+
 // ── WEIGHTS ───────────────────────────────────────────────────────────────────
 function renderWeights(c){
+  // Backup/Restore card
+  const backupCard=el("div","card");backupCard.style.marginBottom="12px";
+  backupCard.innerHTML=`<div style="font-weight:800;font-size:15px;color:#f1f5f9;margin-bottom:4px">💾 Backup & Restore</div><div style="font-size:11px;color:#2d4060;margin-bottom:14px">Save your picks, pitchers and weights to a file. Restore anytime.</div>`;
+  const expBtn=el("button","btn-secondary","⬇️ Export Backup");
+  expBtn.onclick=exportData;
+  backupCard.appendChild(expBtn);
+  const impWrap=el("div");impWrap.style.marginTop="10px";
+  const impLbl=el("label","","⬆️ Restore from Backup");
+  impLbl.style.cssText="display:block;width:100%;padding:12px 0;border-radius:10px;background:#0f2040;border:1px solid #38bdf8;color:#38bdf8;font-weight:700;font-size:13px;cursor:pointer;text-align:center;";
+  const impInp=document.createElement("input");impInp.type="file";impInp.accept=".json";impInp.style.display="none";
+  impInp.onchange=e=>{if(e.target.files[0])importData(e.target.files[0]);};
+  impLbl.appendChild(impInp);impWrap.appendChild(impLbl);backupCard.appendChild(impWrap);
+  c.appendChild(backupCard);
+
   const card=el("div","card");
   const total=Object.values(WEIGHTS).reduce((s,w)=>s+w.max,0);
   const ideal=Math.round(total*.70),fav=Math.round(total*.55),avg=Math.round(total*.40);
