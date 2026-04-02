@@ -21,7 +21,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 
 /* Header */
 #header{background:#08101e;border-bottom:1px solid #111e30;padding:14px 16px 0;position:sticky;top:0;z-index:50;}
-.header-top{display:flex;align-items:center;gap:10;margin-bottom:13px;}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:13px;}
 .logo-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
 .logo-title{font-weight:900;font-size:17px;color:#f1f5f9;letter-spacing:-0.02em;}
 .logo-sub{font-size:9px;color:#1e2d45;letter-spacing:0.14em;text-transform:uppercase;}
@@ -457,7 +457,7 @@ function renderBoard(c){
   state.batters.forEach(b=>{if(b.grade?.tier)counts[b.grade.tier]++;});
   ["All","Ideal","Favorable","Average","Avoid"].forEach(f=>{
     const tc=f==="All"?null:TIER_CFG[f];
-    const p=el("div","filter-pill"+(state.filter===f?" active":""),`${f}${counts[f]>0?` (${counts[f]})`:""}"`);
+    const p=el("div","filter-pill"+(state.filter===f?" active":""),`${f}${counts[f]>0?` (${counts[f]})`:""}`);
     if(state.filter===f&&tc){p.style.cssText+=`;color:${tc.color};background:${tc.color}18;border-color:${tc.color}66`;}
     else if(state.filter===f){p.style.cssText+=`;color:#f1f5f9;background:#1e293b;border-color:#334155`;}
     p.onclick=()=>{state.filter=f;render();};
