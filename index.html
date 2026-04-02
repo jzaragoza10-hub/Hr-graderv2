@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>⚾ HR Grader</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#060d18;font-family:'Inter',sans-serif;color:#e2e8f0;min-height:100vh;padding-bottom:100px;}
+input,select,button{font-family:'Inter',sans-serif;}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:#0b1120;}
+::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:4px;}
+
+/* Layout */
+#app{max-width:540px;margin:0 auto;}
+.page{padding:16px 14px;}
+
+/* Header */
+#header{background:#08101e;border-bottom:1px solid #111e30;padding:14px 16px 0;position:sticky;top:0;z-index:50;}
+.header-top{display:flex;align-items:center;gap:10;margin-bottom:13px;}
+.logo-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.logo-title{font-weight:900;font-size:17px;color:#f1f5f9;letter-spacing:-0.02em;}
+.logo-sub{font-size:9px;color:#1e2d45;letter-spacing:0.14em;text-transform:uppercase;}
+.tier-pills{margin-left:auto;display:flex;gap:5px;}
+.tier-pill{text-align:center;border-radius:8px;padding:4px 8px;cursor:pointer;border:1px solid #111e30;background:#0b1120;}
+.tier-pill-num{font-size:13px;font-weight:800;font-family:‘JetBrains Mono’,monospace;}
+.tier-pill-lbl{font-size:8px;color:#1e2d45;letter-spacing:0.04em;}
+
+/* Tabs */
+.tabs{display:flex;}
+.tab-btn{flex:1;padding:9px 0;border:none;cursor:pointer;background:transparent;border-bottom:2px solid transparent;color:#2d4060;font-weight:400;font-size:11px;display:flex;align-items:center;justify-content:center;gap:4px;transition:all 0.15s;}
+.tab-btn.active{border-bottom:2px solid #22c55e;color:#22c55e;font-weight:700;}
+.tab-icon{font-size:13px;}
+
+/* Cards */
+.card{background:#0c1524;border:1px solid #1e2d45;border-radius:16px;padding:18px;margin-bottom:12px;}
+
+/* Forms */
+.field{margin-bottom:0;}
+.field label{display:block;font-size:11px;font-weight:700;color:#4a6080;letter-spacing:0.09em;text-transform:uppercase;margin-bottom:5px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px;}
+.span2{grid-column:span 2;}
+input[type=text],input[type=number],input[type=date],select{
+width:100%;background:#0b1120;border:1px solid #1e2d45;border-radius:10px;color:#e2e8f0;
+padding:11px 13px;font-size:14px;outline:none;appearance:none;-webkit-appearance:none;
+}
+select{cursor:pointer;background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’ viewBox=‘0 0 12 8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%234a6080’ stroke-width=‘1.5’ fill=‘none’ stroke-linecap=‘round’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+input:focus,select:focus{border-color:#38bdf8;}
+
+/* Section headers */
+.sec-head{display:flex;align-items:center;gap:8px;margin:22px 0 13px;padding-bottom:8px;border-bottom:1px solid #111e30;}
+.sec-head-icon{font-size:15px;}
+.sec-head-title{font-size:12px;font-weight:700;color:#38bdf8;letter-spacing:0.06em;}
+.sec-head-sub{font-size:10px;color:#2d4060;margin-top:1px;}
+
+/* Hand toggle */
+.hand-toggle{display:flex;gap:8px;}
+.hand-btn{flex:1;padding:10px 0;border-radius:9px;border:1.5px solid #1e2d45;background:#0b1120;color:#4a6080;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s;}
+.hand-btn.active-rhb{border-color:rgba(245,158,11,0.6);background:rgba(245,158,11,0.1);color:#f59e0b;}
+.hand-btn.active-lhb{border-color:rgba(56,189,248,0.6);background:rgba(56,189,248,0.1);color:#38bdf8;}
+.hand-btn.active-sw{border-color:rgba(167,139,250,0.6);background:rgba(167,139,250,0.1);color:#a78bfa;}
+
+/* Platoon indicator */
+.platoon-box{border-radius:9px;padding:8px 12px;font-size:12px;font-weight:600;margin-bottom:11px;}
+
+/* Info box */
+.info-box{background:#081018;border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#2d4060;line-height:1.7;}
+
+/* Buttons */
+.btn-primary{width:100%;padding:14px 0;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-weight:800;font-size:15px;cursor:pointer;letter-spacing:0.02em;}
+.btn-primary:active{opacity:0.85;}
+.btn-secondary{width:100%;padding:12px 0;border-radius:10px;background:#0f2040;border:1px solid #38bdf8;color:#38bdf8;font-weight:700;font-size:13px;cursor:pointer;}
+.btn-outline{width:100%;padding:14px 0;border-radius:12px;background:#0b1120;border:1.5px dashed #1e2d45;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-sm{padding:5px 11px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid #1e2d45;background:#0b1120;color:#4a6080;}
+.btn-sm:active{opacity:0.7;}
+
+/* Grade card */
+.grade-card{border-radius:16px;overflow:hidden;margin-bottom:10px;border:1.5px solid;}
+.grade-card-header{padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;}
+.grade-card-body{border-top:1px solid #111e30;padding:16px 16px 14px;}
+
+/* Score ring */
+.score-ring{position:relative;width:56px;height:56px;flex-shrink:0;}
+.score-ring svg{position:absolute;inset:0;}
+.score-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-num{font-size:15px;font-weight:900;line-height:1;font-family:‘JetBrains Mono’,monospace;}
+.score-denom{font-size:8px;letter-spacing:0.04em;}
+
+/* Score bars */
+.bar-row{margin-bottom:11px;}
+.bar-meta{display:flex;justify-content:space-between;margin-bottom:4px;align-items:baseline;}
+.bar-label{font-size:12px;color:#94a3b8;font-weight:500;}
+.bar-right{display:flex;align-items:center;gap:8px;}
+.bar-sub{font-size:10px;color:#2d4060;}
+.bar-score{font-size:12px;font-weight:700;font-family:‘JetBrains Mono’,monospace;}
+.bar-track{height:5px;background:#111e30;border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.5s ease;}
+
+/* Filter pills */
+.filter-row{display:flex;gap:7px;margin-bottom:15px;overflow-x:auto;padding-bottom:2px;}
+.filter-pill{padding:6px 13px;border-radius:20px;cursor:pointer;white-space:nowrap;font-size:12px;font-weight:400;border:1px solid #111e30;background:#0b1120;color:#2d4060;}
+.filter-pill.active{font-weight:700;}
+
+/* Empty state */
+.empty{text-align:center;padding:70px 0;}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-title{font-size:14px;color:#4a6080;font-weight:600;}
+.empty-sub{font-size:12px;color:#1e2d45;margin-top:5px;}
+
+/* Pitcher card */
+.pitcher-card{background:#0c1524;border:1px solid #1e2d45;border-radius:14px;padding:13px 15px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;}
+.pitcher-hand-badge{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;font-family:‘JetBrains Mono’,monospace;flex-shrink:0;}
+
+/* Weight editor */
+.weight-row{display:flex;align-items:center;gap:10px;margin-bottom:13px;}
+.weight-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.weight-label{flex:1;font-size:12px;color:#64748b;}
+.weight-val{font-size:13px;font-weight:700;font-family:‘JetBrains Mono’,monospace;width:24px;text-align:right;}
+
+/* Discord toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a2744;border:1px solid #38bdf8;border-radius:12px;padding:10px 18px;font-size:12px;color:#38bdf8;font-weight:600;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+
+/* Result buttons */
+.result-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;}
+.result-btn{padding:5px 11px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid #1e2d45;background:#0b1120;color:#4a6080;}
+
+input[type=range]{accent-color:#38bdf8;width:90px;}
+</style>
+
+</head>
+<body>
+
+<div id="app">
+  <div id="header">
+    <div class="header-top" style="display:flex;align-items:center;gap:10px;margin-bottom:13px;">
+      <div class="logo-icon">⚾</div>
+      <div>
+        <div class="logo-title">HR Grader</div>
+        <div class="logo-sub">Daily Prop Analyzer</div>
+      </div>
+      <div class="tier-pills" id="tierPills"></div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div id="app-content" class="page"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1489357277432512564/idas0A_wv-jF5ki8KGj53cILB_GkBQ_Lde0MadmkItO_0Gr9LixoakYIdbTEqLsz0lw3";
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const PARKS=[
+  {name:"Coors Field (COL)",factor:1.20},{name:"American Family Field (MIL)",factor:1.16},
+  {name:"Yankee Stadium (NYY)",factor:1.14},{name:"Minute Maid Park (HOU)",factor:1.13},
+  {name:"Great American Ball Park (CIN)",factor:1.12},{name:"Globe Life Field (TEX)",factor:1.08},
+  {name:"Citizens Bank Park (PHI)",factor:1.10},{name:"Camden Yards (BAL)",factor:1.07},
+  {name:"Wrigley Field (CHC)",factor:1.06},{name:"Chase Field (ARI)",factor:1.05},
+  {name:"Fenway Park (BOS)",factor:1.05},{name:"Truist Park (ATL)",factor:1.04},
+  {name:"Guaranteed Rate Field (CWS)",factor:1.03},{name:"Dodger Stadium (LAD)",factor:1.02},
+  {name:"Rogers Centre (TOR)",factor:1.01},{name:"Nationals Park (WSH)",factor:1.00},
+  {name:"Progressive Field (CLE)",factor:0.99},{name:"Angel Stadium (LAA)",factor:0.99},
+  {name:"Target Field (MIN)",factor:0.98},{name:"T-Mobile Park (SEA)",factor:0.97},
+  {name:"Busch Stadium (STL)",factor:0.97},{name:"Citi Field (NYM)",factor:0.96},
+  {name:"Kauffman Stadium (KC)",factor:0.96},{name:"Sutter Health Park (OAK)",factor:0.95},
+  {name:"loanDepot Park (MIA)",factor:0.94},{name:"Comerica Park (DET)",factor:0.94},
+  {name:"PNC Park (PIT)",factor:0.92},{name:"Petco Park (SD)",factor:0.91},
+  {name:"Tropicana Field (TB)",factor:0.90},{name:"Oracle Park (SF)",factor:0.88},
+  {name:"Oakland Coliseum (OAK)",factor:0.88},
+];
+const PITCH_TYPES=["None / Skip","Four-Seam Fastball","Sinker / Two-Seam","Cutter","Slider","Sweeper","Curveball","Changeup","Splitter"];
+const WIND_DIRS=["Blowing Out (toward OF)","Blowing In (toward home)","Crosswind","Calm / Dome"];
+const BVP_SOURCES=["Direct BvP (vs this pitcher)","vs RHP splits","vs LHP splits"];
+const PLATOON_WEAKNESS=["None / Unknown","Weak vs LHB","Weak vs RHB","Weak vs Both"];
+const LINEUP_SPOTS=["1","2","3","4","5","6","7","8","9"];
+
+const TIER_CFG={
+  Ideal:  {color:"#22c55e",bg:"rgba(34,197,94,0.08)",  border:"rgba(34,197,94,0.30)",  icon:"🟢"},
+  Favorable:{color:"#f59e0b",bg:"rgba(245,158,11,0.08)",border:"rgba(245,158,11,0.30)",icon:"✅"},
+  Average:{color:"#f97316",bg:"rgba(249,115,22,0.08)", border:"rgba(249,115,22,0.30)", icon:"🟡"},
+  Avoid:  {color:"#ef4444",bg:"rgba(239,68,68,0.08)",  border:"rgba(239,68,68,0.25)",  icon:"🔴"},
+};
+
+let WEIGHTS={
+  ev:        {label:"Exit Velocity",      max:18,color:"#38bdf8"},
+  barrel:    {label:"Barrel %",           max:14,color:"#a78bfa"},
+  hrfb:      {label:"HR/FB %",            max:12,color:"#f472b6"},
+  batted:    {label:"Air Ball Ratio",     max:10,color:"#fb923c"},
+  pull:      {label:"Pull %",             max:7, color:"#fbbf24"},
+  hardHit:   {label:"Hard Hit %",         max:7, color:"#4ade80"},
+  bvp:       {label:"BvP History",        max:14,color:"#f59e0b"},
+  platoon:   {label:"Platoon Advantage",  max:8, color:"#e879f9"},
+  pitcher:   {label:"Pitcher Vuln.",      max:18,color:"#f87171"},
+  park:      {label:"Park Factor",        max:10,color:"#34d399"},
+  weather:   {label:"Weather",            max:8, color:"#60a5fa"},
+  pitchBoost:{label:"Pitch Boost",        max:6, color:"#c084fc"},
+};
+const DEFAULT_WEIGHTS=JSON.parse(JSON.stringify(WEIGHTS));
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let state={tab:"board",pitchers:[],batters:[],filter:"All",showPitcherForm:false};
+
+function load(){
+  try{
+    const b=localStorage.getItem("hrg-batters"); if(b) state.batters=JSON.parse(b);
+    const p=localStorage.getItem("hrg-pitchers"); if(p) state.pitchers=JSON.parse(p);
+    const w=localStorage.getItem("hrg-weights"); if(w) WEIGHTS=JSON.parse(w);
+  }catch(e){}
+}
+function save(){
+  try{
+    localStorage.setItem("hrg-batters",JSON.stringify(state.batters));
+    localStorage.setItem("hrg-pitchers",JSON.stringify(state.pitchers));
+    localStorage.setItem("hrg-weights",JSON.stringify(WEIGHTS));
+  }catch(e){}
+}
+
+// ── SCORING ───────────────────────────────────────────────────────────────────
+function calcScore(batter,pitcher){
+  const n=v=>{const x=parseFloat(v);return isNaN(x)?null:x;};
+  const pts=(raw,max)=>Math.max(0,Math.min(Math.round(raw*max),max));
+  const bd={};
+
+  const ev=n(batter.avgEV);
+  bd.ev=ev===null?{score:0,label:"No data"}:{
+    score:pts(ev>=97?1:ev>=95?.88:ev>=93?.72:ev>=91?.52:ev>=89?.32:ev>=87?.16:.06,WEIGHTS.ev.max),
+    label:ev>=96?"Elite":ev>=93?"Strong":ev>=90?"Average":"Weak"
+  };
+
+  const bar=n(batter.barrelPct);
+  bd.barrel=bar===null?{score:0,label:"No data"}:{
+    score:pts(bar>=22?1:bar>=18?.85:bar>=14?.68:bar>=10?.48:bar>=7?.28:bar>=4?.14:.05,WEIGHTS.barrel.max),
+    label:bar>=20?"Elite":bar>=14?"Strong":bar>=9?"Average":"Weak"
+  };
+
+  const hrfb=n(batter.hrFbPct);
+  bd.hrfb=hrfb===null?{score:0,label:"No data"}:{
+    score:pts(hrfb>=28?1:hrfb>=22?.85:hrfb>=17?.68:hrfb>=12?.48:hrfb>=8?.28:.10,WEIGHTS.hrfb.max),
+    label:hrfb>=24?"Elite":hrfb>=17?"Strong":hrfb>=10?"Average":"Weak"
+  };
+
+  const fb=n(batter.fbPct),gb=n(batter.gbPct),ld=n(batter.ldPct);
+  if(fb!==null&&gb!==null){
+    const air=fb+(ld||0),ratio=gb>0?air/gb:air;
+    bd.batted={score:pts(ratio>=2.8?1:ratio>=2.2?.85:ratio>=1.7?.67:ratio>=1.2?.45:ratio>=.8?.24:.08,WEIGHTS.batted.max),
+      label:ratio>=2.5?"Elite Air":ratio>=1.8?"Good Air":ratio>=1.2?"Neutral":"GB Heavy"};
+  }else bd.batted={score:0,label:"No data"};
+
+  const pull=n(batter.pullPct);
+  bd.pull=pull===null?{score:0,label:"No data"}:{
+    score:pts(pull>=52?1:pull>=46?.82:pull>=40?.62:pull>=34?.40:pull>=28?.20:.08,WEIGHTS.pull.max),
+    label:pull>=48?"Elite":pull>=42?"Strong":pull>=35?"Average":"Low"
+  };
+
+  const hh=n(batter.hardHitPct);
+  bd.hardHit=hh===null?{score:0,label:"No data"}:{
+    score:pts(hh>=58?1:hh>=52?.82:hh>=46?.62:hh>=40?.40:hh>=34?.20:.08,WEIGHTS.hardHit.max),
+    label:hh>=54?"Elite":hh>=48?"Strong":hh>=42?"Average":"Low"
+  };
+
+  const hrB=n(batter.hrVsPitcher),abB=n(batter.abVsPitcher),slgB=n(batter.slgVsPitcher);
+  if(batter.bvpSource!=="Direct BvP (vs this pitcher)"){
+    const iso=n(batter.iso);
+    bd.bvp=iso===null?{score:0,label:"No data"}:{
+      score:pts(iso>=.32?1:iso>=.27?.80:iso>=.22?.60:iso>=.17?.40:iso>=.12?.22:.08,WEIGHTS.bvp.max),
+      label:batter.bvpSource
+    };
+  }else if(hrB!==null&&abB!==null&&abB>0){
+    let r=.15;
+    if(hrB>=4)r=1;else if(hrB>=3)r=.88;else if(hrB>=2)r=.72;else if(hrB>=1)r=.52;
+    if(slgB!==null&&slgB>=.65)r=Math.min(r+.1,1);
+    if(abB<8)r*=.75;
+    bd.bvp={score:pts(r,WEIGHTS.bvp.max),label:hrB>=3?"Dominant":hrB>=2?"Strong":hrB>=1?"Some history":"No HRs vs P"};
+  }else bd.bvp={score:0,label:"No data"};
+
+  // Platoon
+  const bH=batter.hand,pH=pitcher?.hand||"",pW=pitcher?.platoonWeakness||"None / Unknown";
+  let plRaw=.35;
+  if(bH==="LHB"&&pH==="RHP")plRaw=.60;
+  else if(bH==="RHB"&&pH==="LHP")plRaw=.60;
+  else if(bH==="Switch")plRaw=.55;
+  else if((bH==="RHB"&&pH==="RHP")||(bH==="LHB"&&pH==="LHP"))plRaw=.25;
+  if(pW==="Weak vs LHB"&&(bH==="LHB"||bH==="Switch"))plRaw=Math.min(plRaw+.32,1);
+  if(pW==="Weak vs RHB"&&(bH==="RHB"||bH==="Switch"))plRaw=Math.min(plRaw+.32,1);
+  if(pW==="Weak vs Both")plRaw=Math.min(plRaw+.20,1);
+  bd.platoon={score:pts(plRaw,WEIGHTS.platoon.max),label:plRaw>=.85?"Elite Edge":plRaw>=.65?"Clear Edge":plRaw>=.45?"Neutral":plRaw>=.30?"Slight Disadv.":"Disadvantage"};
+
+  // Pitcher vuln
+  if(pitcher){
+    const iP=n(pitcher.isoAllowed),bP=n(pitcher.barrelAllowed),h9=n(pitcher.hr9),era=n(pitcher.era),fbA=n(pitcher.fbPctAllowed);
+    let r=0;
+    if(iP!==null)r+=iP>=.24?.30:iP>=.19?.22:iP>=.15?.14:iP>=.11?.07:.02;
+    if(bP!==null)r+=bP>=14?.28:bP>=10?.20:bP>=7?.13:bP>=4?.06:.02;
+    if(h9!==null)r+=h9>=1.8?.24:h9>=1.4?.18:h9>=1.0?.12:h9>=.7?.07:.02;
+    if(era!==null)r+=era>=5?.12:era>=4.2?.08:era>=3.5?.05:.02;
+    if(fbA!==null)r+=fbA>=42?.06:fbA>=36?.04:.01;
+    bd.pitcher={score:pts(Math.min(r,1),WEIGHTS.pitcher.max),label:r>=.80?"Very Hittable":r>=.58?"Hittable":r>=.36?"Average":"Tough"};
+  }else bd.pitcher={score:0,label:"No pitcher"};
+
+  // Park
+  const park=PARKS.find(p=>p.name===batter.park);
+  if(park){
+    const f=park.factor;
+    bd.park={score:pts(f>=1.18?1:f>=1.12?.85:f>=1.06?.66:f>=1.00?.46:f>=.95?.26:f>=.90?.12:.04,WEIGHTS.park.max),
+      label:f>=1.14?"Elite":f>=1.05?"Good":f>=.98?"Average":"Poor"};
+  }else bd.park={score:0,label:"No data"};
+
+  // Weather
+  const wind=n(batter.windSpeed),temp=n(batter.temp);
+  let wx=.40;
+  if(wind!==null){
+    if(batter.windDir==="Blowing Out (toward OF)")wx+=wind>=20?.45:wind>=14?.32:wind>=8?.18:wind>=4?.08:.02;
+    else if(batter.windDir==="Blowing In (toward home)")wx-=wind>=18?.32:wind>=10?.20:wind>=5?.10:.02;
+    else if(batter.windDir==="Calm / Dome")wx+=.08;
+  }
+  if(temp!==null)wx+=temp>=88?.18:temp>=78?.10:temp>=65?.04:temp<50?-.14:0;
+  wx=Math.max(0,Math.min(wx,1));
+  bd.weather={score:pts(wx,WEIGHTS.weather.max),label:wx>=.78?"Ideal":wx>=.52?"Favorable":wx>=.32?"Neutral":"Unfavorable"};
+
+  // Pitch boost
+  const pb=n(batter.batterBarrelVsPitch),pu=n(batter.pitchUsagePct),phr=n(batter.batterHrVsPitch);
+  if(pb!==null&&pu!==null&&batter.pitchType&&batter.pitchType!=="None / Skip"){
+    let r=pb>=24&&pu>=48?1:pb>=18&&pu>=36?.72:pb>=12&&pu>=24?.46:pb>=8?.22:.06;
+    if(phr!==null&&phr>=2)r=Math.min(r+.22,1);
+    bd.pitchBoost={score:pts(r,WEIGHTS.pitchBoost.max),label:r>=.80?"Strong Boost":r>=.50?"Mild Boost":"Minimal"};
+  }else bd.pitchBoost={score:0,label:"N/A"};
+
+  const total=Object.values(bd).reduce((s,v)=>s+v.score,0);
+  const maxTotal=Object.values(WEIGHTS).reduce((s,w)=>s+w.max,0);
+  const pct=total/maxTotal;
+  const tier=pct>=.70?"Ideal":pct>=.55?"Favorable":pct>=.40?"Average":"Avoid";
+  return{total,maxTotal,pct,tier,breakdown:bd};
+}
+
+// ── DISCORD ───────────────────────────────────────────────────────────────────
+async function postToDiscord(batter,pitcher,grade){
+  const t=TIER_CFG[grade.tier];
+  const bar=(score,max)=>{const p=Math.round(score/max*10);return "█".repeat(p)+"░".repeat(10-p);};
+  const fields=Object.entries(WEIGHTS).map(([k,w])=>{
+    const bd=grade.breakdown[k];
+    if(!bd||bd.score===0)return null;
+    return {name:`${w.label}`,value:`${bar(bd.score,w.max)} ${bd.score}/${w.max} — ${bd.label}`,inline:false};
+  }).filter(Boolean);
+
+  const platoonStr=batter.hand&&pitcher?.hand?`${batter.hand} vs ${pitcher.hand}`:"";
+  const embed={
+    title:`${t.icon} ${batter.name} — HR Prop Grade`,
+    description:`**Score: ${grade.total}/${grade.maxTotal}** (${Math.round(grade.pct*100)}%) · **${grade.tier.toUpperCase()}**`,
+    color:parseInt(t.color.replace("#",""),16),
+    fields:[
+      {name:"Matchup",value:`vs ${pitcher?.name||"?"} (${pitcher?.hand||"?"})\n${batter.park||"—"}${platoonStr?"\n"+platoonStr:""}`,inline:true},
+      {name:"Date",value:batter.date||new Date().toLocaleDateString(),inline:true},
+      ...fields,
+    ],
+    footer:{text:"HR Grader · "+new Date().toLocaleTimeString()},
+  };
+  try{
+    await fetch(DISCORD_WEBHOOK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({embeds:[embed]})});
+    showToast("✅ Posted to Discord!");
+  }catch(e){showToast("⚠️ Discord post failed");}
+}
+
+function showToast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),3000);
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function el(tag,cls,html,style){
+  const e=document.createElement(tag);
+  if(cls)e.className=cls;
+  if(html!==undefined)e.innerHTML=html;
+  if(style)Object.assign(e.style,style);
+  return e;
+}
+function sel(opts,val,placeholder){
+  const s=document.createElement("select");
+  if(placeholder){const o=document.createElement("option");o.value="";o.textContent=placeholder;s.appendChild(o);}
+  opts.forEach(o=>{const op=document.createElement("option");op.value=typeof o==="object"?o.v:o;op.textContent=typeof o==="object"?o.l:o;if(op.value==val)op.selected=true;s.appendChild(op);});
+  return s;
+}
+function inp(type,val,ph){
+  const i=document.createElement("input");
+  i.type=type;i.value=val||"";i.placeholder=ph||"";
+  return i;
+}
+function field(label,child,span){
+  const d=document.createElement("div");
+  if(span)d.style.gridColumn=`span ${span}`;
+  const l=document.createElement("label");l.textContent=label;l.className="field";
+  d.appendChild(l);d.appendChild(child);return d;
+}
+function secHead(icon,title,sub){
+  const d=el("div","sec-head");
+  d.innerHTML=`<span class="sec-head-icon">${icon}</span><div><div class="sec-head-title">${title}</div>${sub?`<div class="sec-head-sub">${sub}</div>`:""}`;
+  return d;
+}
+function grid2(...fields){
+  const g=el("div","grid2");fields.forEach(f=>g.appendChild(f));return g;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  renderHeader();
+  renderContent();
+}
+
+function renderHeader(){
+  // Tier pills
+  const pills=document.getElementById("tierPills");
+  pills.innerHTML="";
+  const counts={Ideal:0,Favorable:0,Average:0,Avoid:0};
+  state.batters.forEach(b=>{if(b.grade?.tier)counts[b.grade.tier]++;});
+  Object.entries(counts).forEach(([t,c])=>{
+    if(c===0)return;
+    const tc=TIER_CFG[t];
+    const d=el("div","tier-pill");
+    d.style.cssText+=`;background:${state.filter===t?tc.color+"18":"#0b1120"};border-color:${state.filter===t?tc.color+"55":"#111e30"}`;
+    d.innerHTML=`<div class="tier-pill-num" style="color:${tc.color}">${c}</div><div class="tier-pill-lbl">${t.slice(0,3).toUpperCase()}</div>`;
+    d.onclick=()=>{state.filter=state.filter===t?"All":t;render();};
+    pills.appendChild(d);
+  });
+
+  // Tabs
+  const tabs=document.getElementById("tabs");
+  tabs.innerHTML="";
+  [{id:"board",icon:"📊",label:"Board"},{id:"add",icon:"＋",label:"Add Batter"},{id:"pitchers",icon:"⚾",label:"Pitchers"},{id:"weights",icon:"⚙",label:"Weights"}].forEach(t=>{
+    const b=el("button","tab-btn"+(state.tab===t.id?" active":""),`<span class="tab-icon">${t.icon}</span>${t.label}`);
+    b.onclick=()=>{state.tab=t.id;render();};
+    tabs.appendChild(b);
+  });
+}
+
+function renderContent(){
+  const c=document.getElementById("app-content");
+  c.innerHTML="";
+  if(state.tab==="board")renderBoard(c);
+  else if(state.tab==="add")renderAddBatter(c);
+  else if(state.tab==="pitchers")renderPitchers(c);
+  else if(state.tab==="weights")renderWeights(c);
+}
+
+// ── BOARD ─────────────────────────────────────────────────────────────────────
+function renderBoard(c){
+  // Filter pills
+  const fr=el("div","filter-row");
+  const counts={All:state.batters.length,Ideal:0,Favorable:0,Average:0,Avoid:0};
+  state.batters.forEach(b=>{if(b.grade?.tier)counts[b.grade.tier]++;});
+  ["All","Ideal","Favorable","Average","Avoid"].forEach(f=>{
+    const tc=f==="All"?null:TIER_CFG[f];
+    const p=el("div","filter-pill"+(state.filter===f?" active":""),`${f}${counts[f]>0?` (${counts[f]})`:""}"`);
+    if(state.filter===f&&tc){p.style.cssText+=`;color:${tc.color};background:${tc.color}18;border-color:${tc.color}66`;}
+    else if(state.filter===f){p.style.cssText+=`;color:#f1f5f9;background:#1e293b;border-color:#334155`;}
+    p.onclick=()=>{state.filter=f;render();};
+    fr.appendChild(p);
+  });
+  c.appendChild(fr);
+
+  const filtered=state.filter==="All"?state.batters:state.batters.filter(b=>b.grade?.tier===state.filter);
+  const sorted=[...filtered].sort((a,b)=>b.grade.total-a.grade.total);
+
+  if(sorted.length===0){
+    const emp=el("div","empty");
+    emp.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">No picks yet today</div><div class="empty-sub">Add pitchers first, then grade batters</div>`;
+    const btn=el("button","btn-sm",state.pitchers.length?"Add Batter →":"Add Pitchers →");
+    btn.style.cssText="margin-top:16px;padding:10px 22px;color:#38bdf8;border-color:#1e2d45;";
+    btn.onclick=()=>{state.tab=state.pitchers.length?"add":"pitchers";render();};
+    emp.appendChild(btn);c.appendChild(emp);return;
+  }
+
+  sorted.forEach(b=>c.appendChild(makeGradeCard(b)));
+}
+
+function makeGradeCard(batter){
+  const g=batter.grade;
+  const t=TIER_CFG[g.tier]||TIER_CFG.Avoid;
+  const pct=Math.round(g.pct*100);
+  const card=el("div","grade-card");
+  card.style.cssText=`background:${t.bg};border-color:${t.border};`;
+
+  // Header
+  const hdr=el("div","grade-card-header");
+  const circ=2*Math.PI*24; // circumference
+  const dash=Math.round(pct*circ/100);
+  const handColor=batter.hand==="LHB"?"#38bdf8":batter.hand==="RHB"?"#f59e0b":"#a78bfa";
+  hdr.innerHTML=`
+    <div class="score-ring">
+      <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="none" stroke="#111e30" stroke-width="5"/>
+      <circle cx="28" cy="28" r="24" fill="none" stroke="${t.color}" stroke-width="5"
+        stroke-dasharray="${dash} ${Math.round(circ)}" stroke-linecap="round" transform="rotate(-90 28 28)"/></svg>
+      <div class="score-ring-inner">
+        <span class="score-num" style="color:${t.color}">${g.total}</span>
+        <span class="score-denom" style="color:${t.color}88">/${g.maxTotal}</span>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+        <span style="font-weight:800;font-size:16px;color:#f1f5f9;">${batter.name}</span>
+        ${batter.hand?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${handColor}20;color:${handColor}">${batter.hand}</span>`:""}
+      </div>
+      <div style="font-size:11px;color:#4a6080;margin-top:3px;">vs ${batter.pitcherName||"?"} ${batter.pitcherHand?`(${batter.pitcherHand})`:""} · ${batter.park?batter.park.split("(")[0].trim():"—"}</div>
+      ${batter.result&&batter.result!=="Pending"?`<div style="font-size:11px;margin-top:4px;font-weight:600;color:${batter.result.includes("Hit")?"#22c55e":"#ef4444"}">${batter.result}</div>`:""}
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
+      <span style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:7px;padding:3px 11px;font-size:11px;font-weight:800;letter-spacing:0.07em;">${t.icon} ${g.tier.toUpperCase()}</span>
+      <span style="font-size:10px;color:#1e2d45;" class="toggle-hint">▼</span>
+    </div>`;
+
+  // Body (hidden by default)
+  const body=el("div","grade-card-body");
+  body.style.display="none";
+
+  // Score bars
+  Object.entries(WEIGHTS).forEach(([k,w])=>{
+    const bd=g.breakdown[k];if(!bd)return;
+    const barPct=w.max>0?Math.round(bd.score/w.max*100):0;
+    const row=el("div","bar-row");
+    row.innerHTML=`<div class="bar-meta"><span class="bar-label">${w.label}</span><div class="bar-right"><span class="bar-sub">${bd.label}</span><span class="bar-score" style="color:${w.color}">${bd.score}/${w.max}</span></div></div><div class="bar-track"><div class="bar-fill" style="width:${barPct}%;background:${w.color}"></div></div>`;
+    body.appendChild(row);
+  });
+
+  // Platoon note
+  if(g.breakdown.platoon){
+    const note=el("div","",`<span style="font-weight:700;color:#e879f9;">Platoon: </span>${g.breakdown.platoon.label} · ${batter.hand||"?"} vs ${batter.pitcherHand||"?"}`,{background:"#0b1120",borderRadius:"9px",padding:"9px 12px",marginTop:"4px",marginBottom:"12px",fontSize:"11px",color:"#4a6080",lineHeight:"1.6"});
+    body.appendChild(note);
+  }
+
+  // Result row
+  const rr=el("div","result-row");
+  ["Hit HR ✅","No HR ❌","Pending"].forEach(r=>{
+    const rb=el("button","result-btn",r);
+    if(batter.result===r){rb.style.cssText+=`;border-color:${t.color};background:${t.color}22;color:${t.color};font-weight:700;`;}
+    rb.onclick=e=>{e.stopPropagation();batter.result=r;save();render();};
+    rr.appendChild(rb);
+  });
+  const del=el("button","btn-sm","🗑");del.style.marginLeft="auto";
+  del.onclick=e=>{e.stopPropagation();state.batters=state.batters.filter(b=>b.id!==batter.id);save();render();};
+  rr.appendChild(del);
+  body.appendChild(rr);
+
+  card.appendChild(hdr);card.appendChild(body);
+  hdr.onclick=()=>{
+    const open=body.style.display!=="none";
+    body.style.display=open?"none":"block";
+    hdr.querySelector(".toggle-hint").textContent=open?"▼":"▲";
+  };
+  return card;
+}
+
+// ── ADD BATTER ─────────────────────────────────────────────────────────────────
+let batterForm={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10)};
+
+function renderAddBatter(c){
+  if(state.pitchers.length===0){
+    const d=el("div","empty");d.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">Add pitchers first</div>`;
+    const btn=el("button","btn-sm","Go to Pitchers →");btn.style.cssText="margin-top:12px;padding:10px 20px;color:#38bdf8;";btn.onclick=()=>{state.tab="pitchers";render();};
+    d.appendChild(btn);c.appendChild(d);return;
+  }
+
+  const f=batterForm;
+  const card=el("div","card");
+
+  // Header
+  card.appendChild(secHead("🧢","Batter Info"));
+
+  // Name
+  const nameInp=inp("text",f.name,"Aaron Judge");
+  card.appendChild(grid2(field("Player Name",nameInp,"2")));
+  nameInp.oninput=e=>f.name=e.target.value;
+
+  // Hand toggle
+  const handSec=el("div");handSec.style.marginBottom="11px";
+  const hl=el("label","field","Batter Side");
+  const ht=el("div","hand-toggle");
+  ["RHB","LHB","Switch"].forEach(h=>{
+    const b=el("button","hand-btn"+(f.hand===h?` active-${h.toLowerCase().replace("hb","hb").replace("switch","sw")}`:""),h);
+    b.onclick=()=>{f.hand=h;renderAddBatter(c);};
+    ht.appendChild(b);
+  });
+  handSec.appendChild(hl);handSec.appendChild(ht);card.appendChild(handSec);
+
+  // Pitcher select
+  const pSel=sel(state.pitchers.map(p=>({v:String(p.id),l:`${p.name} (${p.team}) — ${p.hand}`})),String(f.pitcherId||""),"Select pitcher…");
+  pSel.onchange=e=>{f.pitcherId=e.target.value;
+    // Show platoon indicator
+    const pBox=document.getElementById("platoon-box");
+    if(pBox){
+      const pit=state.pitchers.find(p=>String(p.id)===e.target.value);
+      if(pit&&f.hand) updatePlatoonBox(pBox,f.hand,pit);
+      else pBox.style.display="none";
+    }
+  };
+  card.appendChild(grid2(field("Facing Pitcher",pSel,"2")));
+
+  // Platoon indicator
+  const pBox=el("div","platoon-box");pBox.id="platoon-box";pBox.style.display="none";
+  card.appendChild(pBox);
+  if(f.pitcherId&&f.hand){
+    const pit=state.pitchers.find(p=>String(p.id)===String(f.pitcherId));
+    if(pit){pBox.style.display="block";updatePlatoonBox(pBox,f.hand,pit);}
+  }
+
+  // Park + Date + Lineup
+  const parkSel=sel(PARKS.map(p=>p.name),f.park,"Select park…");parkSel.onchange=e=>f.park=e.target.value;
+  const dateInp=inp("date",f.date);dateInp.onchange=e=>f.date=e.target.value;
+  const luSel=sel([""].concat(LINEUP_SPOTS),f.lineupSpot,"—");luSel.onchange=e=>f.lineupSpot=e.target.value;
+  card.appendChild(grid2(field("Park",parkSel,"2"),field("Date",dateInp),field("Lineup Spot",luSel)));
+
+  // Power
+  card.appendChild(secHead("⚡","Power Metrics","vs pitcher's arsenal"));
+  const evI=inp("number",f.avgEV,"94.5");evI.oninput=e=>f.avgEV=e.target.value;
+  const barI=inp("number",f.barrelPct,"18.0");barI.oninput=e=>f.barrelPct=e.target.value;
+  const hrfbI=inp("number",f.hrFbPct,"22.0");hrfbI.oninput=e=>f.hrFbPct=e.target.value;
+  const hhI=inp("number",f.hardHitPct,"48.0");hhI.oninput=e=>f.hardHitPct=e.target.value;
+  const isoI=inp("number",f.iso,"0.280");isoI.oninput=e=>f.iso=e.target.value;
+  card.appendChild(grid2(field("Avg Exit Velo (mph)",evI),field("Barrel %",barI),field("HR/FB %",hrfbI),field("Hard Hit %",hhI),field("ISO vs Arsenal",isoI)));
+
+  // Batted ball
+  card.appendChild(secHead("🎯","Batted Ball Profile","Air Ratio = (FB%+LD%) ÷ GB%"));
+  const infoBox=el("div","info-box","<span style='color:#38bdf8;font-weight:600'>Air Ratio:</span> Elite ≥2.5 · Good ≥1.8 · Neutral ≥1.2 · GB-heavy &lt;1.0");
+  card.appendChild(infoBox);
+  const fbI=inp("number",f.fbPct,"42");fbI.oninput=e=>f.fbPct=e.target.value;
+  const gbI=inp("number",f.gbPct,"35");gbI.oninput=e=>f.gbPct=e.target.value;
+  const ldI=inp("number",f.ldPct,"23");ldI.oninput=e=>f.ldPct=e.target.value;
+  const pullI=inp("number",f.pullPct,"45");pullI.oninput=e=>f.pullPct=e.target.value;
+  card.appendChild(grid2(field("FB% (Fly Ball)",fbI),field("GB% (Ground Ball)",gbI),field("LD% (Line Drive)",ldI),field("Pull%",pullI)));
+
+  // BvP
+  card.appendChild(secHead("📋","BvP History"));
+  const bvpSel=sel(BVP_SOURCES,f.bvpSource);bvpSel.onchange=e=>f.bvpSource=e.target.value;
+  const abI=inp("number",f.abVsPitcher,"12");abI.oninput=e=>f.abVsPitcher=e.target.value;
+  const hrBI=inp("number",f.hrVsPitcher,"2");hrBI.oninput=e=>f.hrVsPitcher=e.target.value;
+  const slgI=inp("number",f.slgVsPitcher,"0.583");slgI.oninput=e=>f.slgVsPitcher=e.target.value;
+  const avgI=inp("number",f.avgVsPitcher,"0.333");avgI.oninput=e=>f.avgVsPitcher=e.target.value;
+  card.appendChild(grid2(field("Source",bvpSel,"2"),field("AB vs Pitcher",abI),field("HR vs Pitcher",hrBI),field("SLG vs Pitcher",slgI),field("AVG vs Pitcher",avgI)));
+
+  // Pitch boost
+  card.appendChild(secHead("🎰","Pitch Type Boost","Only if batter crushes a pitch thrown heavily"));
+  const ptSel=sel(PITCH_TYPES,f.pitchType);ptSel.onchange=e=>f.pitchType=e.target.value;
+  const puI=inp("number",f.pitchUsagePct,"55");puI.oninput=e=>f.pitchUsagePct=e.target.value;
+  const pbI=inp("number",f.batterBarrelVsPitch,"24");pbI.oninput=e=>f.batterBarrelVsPitch=e.target.value;
+  const phrI=inp("number",f.batterHrVsPitch,"3");phrI.oninput=e=>f.batterHrVsPitch=e.target.value;
+  card.appendChild(grid2(field("Pitcher Primary Pitch",ptSel,"2"),field("Pitch Usage %",puI),field("Barrel% vs Pitch",pbI),field("HR vs This Pitch",phrI)));
+
+  // Weather
+  card.appendChild(secHead("🌤","Weather"));
+  const wsI=inp("number",f.windSpeed,"12");wsI.oninput=e=>f.windSpeed=e.target.value;
+  const wdSel=sel(WIND_DIRS,f.windDir);wdSel.onchange=e=>f.windDir=e.target.value;
+  const tempI=inp("number",f.temp,"78");tempI.oninput=e=>f.temp=e.target.value;
+  const humI=inp("number",f.humidity,"55");humI.oninput=e=>f.humidity=e.target.value;
+  card.appendChild(grid2(field("Wind Speed (mph)",wsI),field("Wind Direction",wdSel,"1"),field("Temp (°F)",tempI),field("Humidity %",humI)));
+
+  // Submit
+  const submitBtn=el("button","btn-primary","⚡ GRADE THIS MATCHUP");
+  submitBtn.style.marginTop="22px";
+  submitBtn.onclick=()=>{
+    if(!f.name)return alert("Enter player name.");
+    if(!f.pitcherId)return alert("Select a pitcher.");
+    const pitcher=state.pitchers.find(p=>String(p.id)===String(f.pitcherId));
+    const grade=calcScore(f,pitcher);
+    const batter={...f,id:Date.now(),grade,pitcherName:pitcher?.name||"",pitcherHand:pitcher?.hand||""};
+    state.batters.unshift(batter);
+    save();
+    postToDiscord(batter,pitcher,grade);
+    batterForm={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:f.date,pitcherId:f.pitcherId};
+    state.tab="board";render();
+  };
+  card.appendChild(submitBtn);
+  c.appendChild(card);
+}
+
+function updatePlatoonBox(box,hand,pitcher){
+  const pH=pitcher.hand,pW=pitcher.platoonWeakness||"";
+  const edge=(hand==="LHB"&&pH==="RHP")||(hand==="RHB"&&pH==="LHP");
+  const same=(hand==="LHB"&&pH==="LHP")||(hand==="RHB"&&pH==="RHP");
+  const weak=pW.includes(hand)||pW==="Weak vs Both";
+  const color=weak||edge?"#22c55e":same?"#ef4444":"#f59e0b";
+  const msg=weak?`⚔️ ${pitcher.name} documented WEAK vs ${hand}`:edge?`✅ Classic platoon edge — ${hand} vs ${pH}`:same?`⚠️ Same-side matchup — slight disadvantage`:`➡️ Neutral platoon`;
+  box.style.cssText=`background:${color}12;border:1px solid ${color}33;border-radius:9px;padding:8px 12px;font-size:12px;color:${color};font-weight:600;margin-bottom:11px;display:block;`;
+  box.textContent=msg;
+}
+
+// ── PITCHERS ─────────────────────────────────────────────────────────────────
+let pitcherForm={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
+
+function renderPitchers(c){
+  state.pitchers.forEach(p=>c.appendChild(makePitcherCard(p)));
+
+  if(state.showPitcherForm){
+    c.appendChild(makePitcherForm());
+  }else{
+    const btn=el("button","btn-outline","＋ Add Pitcher");
+    btn.onclick=()=>{state.showPitcherForm=true;render();};
+    c.appendChild(btn);
+  }
+}
+
+function makePitcherCard(p){
+  const isLHP=p.hand==="LHP";
+  const card=el("div","pitcher-card");
+  const badge=el("div","pitcher-hand-badge",p.hand,{background:isLHP?"rgba(56,189,248,0.12)":"rgba(245,158,11,0.12)",color:isLHP?"#38bdf8":"#f59e0b"});
+  const info=el("div","",`
+    <div style="font-weight:700;font-size:14px;color:#f1f5f9">${p.name} <span style="color:#2d4060;font-weight:400;font-size:12px">· ${p.team}</span></div>
+    <div style="font-size:11px;color:#2d4060;margin-top:3px;line-height:1.7">ERA ${p.era||"—"} · HR/9 ${p.hr9||"—"} · ISO ${p.isoAllowed||"—"} · Barrel% ${p.barrelAllowed||"—"}</div>
+    ${p.platoonWeakness&&p.platoonWeakness!=="None / Unknown"?`<div style="margin-top:5px;font-size:11px;font-weight:600;color:#e879f9">⚔️ ${p.platoonWeakness}</div>`:""}
+    ${p.vsLHBhr9||p.vsRHBhr9?`<div style="font-size:11px;color:#2d4060;margin-top:2px">${p.vsLHBhr9?`HR/9 vs LHB: ${p.vsLHBhr9}`:""}${p.vsLHBhr9&&p.vsRHBhr9?" · ":""}${p.vsRHBhr9?`HR/9 vs RHB: ${p.vsRHBhr9}`:""}</div>`:""}
+  `);
+  info.style.flex="1";
+  const del=el("button","btn-sm","✕");
+  del.onclick=()=>{state.pitchers=state.pitchers.filter(x=>x.id!==p.id);save();render();};
+  card.appendChild(badge);card.appendChild(info);card.appendChild(del);
+  return card;
+}
+
+function makePitcherForm(){
+  const f=pitcherForm;
+  const card=el("div","card");
+  card.appendChild(secHead("⚾","Pitcher Details","Stats allowed — used in matchup scoring"));
+
+  const nameI=inp("text",f.name,"Spencer Strider");nameI.oninput=e=>f.name=e.target.value;
+  const teamI=inp("text",f.team,"ATL");teamI.oninput=e=>f.team=e.target.value;
+  const handSel=sel(["RHP","LHP"],f.hand);handSel.onchange=e=>f.hand=e.target.value;
+  const eraI=inp("number",f.era,"3.45");eraI.oninput=e=>f.era=e.target.value;
+  const hr9I=inp("number",f.hr9,"1.2");hr9I.oninput=e=>f.hr9=e.target.value;
+  const isoI=inp("number",f.isoAllowed,"0.190");isoI.oninput=e=>f.isoAllowed=e.target.value;
+  const barI=inp("number",f.barrelAllowed,"9.0");barI.oninput=e=>f.barrelAllowed=e.target.value;
+  const fbI=inp("number",f.fbPctAllowed,"38");fbI.oninput=e=>f.fbPctAllowed=e.target.value;
+  const ptSel=sel(PITCH_TYPES,f.primaryPitch);ptSel.onchange=e=>f.primaryPitch=e.target.value;
+  card.appendChild(grid2(field("Name",nameI,"2"),field("Team",teamI),field("Throws",handSel),field("ERA",eraI),field("HR/9",hr9I),field("ISO Allowed",isoI),field("Barrel% Allowed",barI),field("FB% Allowed",fbI),field("Primary Pitch",ptSel)));
+
+  card.appendChild(secHead("⚔️","Platoon Weakness","Pitcher's documented splits"));
+  const pwSel=sel(PLATOON_WEAKNESS,f.platoonWeakness);pwSel.onchange=e=>f.platoonWeakness=e.target.value;
+  const lhbI=inp("number",f.vsLHBhr9,"1.4");lhbI.oninput=e=>f.vsLHBhr9=e.target.value;
+  const rhbI=inp("number",f.vsRHBhr9,"0.9");rhbI.oninput=e=>f.vsRHBhr9=e.target.value;
+  card.appendChild(grid2(field("Weak vs Side",pwSel,"2"),field("HR/9 vs LHB",lhbI),field("HR/9 vs RHB",rhbI)));
+
+  const saveBtn=el("button","btn-secondary","＋ Save Pitcher");saveBtn.style.marginTop="16px";
+  saveBtn.onclick=()=>{
+    if(!f.name)return alert("Enter pitcher name.");
+    state.pitchers.push({...f,id:Date.now()});
+    pitcherForm={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
+    state.showPitcherForm=false;save();render();
+  };
+  card.appendChild(saveBtn);
+  return card;
+}
+
+// ── WEIGHTS ───────────────────────────────────────────────────────────────────
+function renderWeights(c){
+  const card=el("div","card");
+  const total=Object.values(WEIGHTS).reduce((s,w)=>s+w.max,0);
+  const ideal=Math.round(total*.70),fav=Math.round(total*.55),avg=Math.round(total*.40);
+  const hdr=el("div","",`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-weight:800;font-size:15px;color:#f1f5f9">Scoring Weights</div><div style="font-size:11px;color:#2d4060;margin-top:3px">Adjust max points per factor</div></div><div style="text-align:right"><div style="font-size:13px;color:#38bdf8;font-weight:700;font-family:'JetBrains Mono',monospace">${total} pts max</div><div style="font-size:10px;color:#2d4060;margin-top:2px">Ideal ≥${ideal} · Fav ≥${fav} · Avg ≥${avg}</div></div></div>`);
+  card.appendChild(hdr);
+
+  Object.entries(WEIGHTS).forEach(([k,w])=>{
+    const row=el("div","weight-row");
+    const dot=el("div","weight-dot","",{background:w.color});
+    const lbl=el("div","weight-label",w.label);
+    const slider=document.createElement("input");slider.type="range";slider.min=0;slider.max=30;slider.value=w.max;slider.style.accentColor=w.color;
+    const val=el("div","weight-val",String(w.max),{color:w.color});
+    slider.oninput=e=>{WEIGHTS[k].max=parseInt(e.target.value);val.textContent=e.target.value;save();};
+    row.appendChild(dot);row.appendChild(lbl);row.appendChild(slider);row.appendChild(val);
+    card.appendChild(row);
+  });
+
+  const resetBtn=el("button","",`↺ Reset to Defaults`,{width:"100%",padding:"9px 0",borderRadius:"8px",background:"#0b1120",border:"1px solid #1e2d45",color:"#4a6080",fontSize:"12px",cursor:"pointer",marginTop:"8px"});
+  resetBtn.onclick=()=>{WEIGHTS=JSON.parse(JSON.stringify(DEFAULT_WEIGHTS));save();render();};
+  card.appendChild(resetBtn);
+  c.appendChild(card);
+}
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+load();render();
+</script>
+
+</body>
+</html>
