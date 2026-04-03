@@ -923,13 +923,11 @@ function mkPitForm(){
   const hr9I=inp("number",f.hr9,"1.20");hr9I.oninput=e=>f.hr9=e.target.value;
   const isoI=inp("number",f.isoAllowed,"0.185");isoI.oninput=e=>f.isoAllowed=e.target.value;
   const barI=inp("number",f.barrelAllowed,"9.0");barI.oninput=e=>f.barrelAllowed=e.target.value;
-  const fbAI=inp("number",f.fbPctAllowed,"38");fbAI.oninput=e=>f.fbPctAllowed=e.target.value;
   card.appendChild(g2(
     fld("Name",nameI,2),
     fld("Team",teamI),fld("Throws",handSel),
     fld("ERA",eraI),fld("HR/9",hr9I),
-    fld("ISO Allowed",isoI),fld("Barrel% Allowed",barI),
-    fld("FB% Allowed",fbAI)
+    fld("ISO Allowed",isoI),fld("Barrel% Allowed",barI)
   ));
 
   card.appendChild(sec("⚔️","Platoon Splits","Pitcher's documented weakness vs handedness"));
