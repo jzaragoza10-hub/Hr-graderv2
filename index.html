@@ -5,829 +5,966 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>⚾ HR Grader</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-body{background:#060d18;font-family:'Inter',sans-serif;color:#e2e8f0;min-height:100vh;padding-bottom:100px;}
+:root{
+  --bg:#0a0804;
+  --surface:#100d08;
+  --card:#16120c;
+  --card2:#1c1710;
+  --border:#2a2018;
+  --border2:#362c1e;
+  --green:#4a9c5c;
+  --green2:#5cb870;
+  --green3:#72d688;
+  --brown:#8b6340;
+  --brown2:#a87848;
+  --amber:#c8922a;
+  --amber2:#e8a830;
+  --red:#c0392b;
+  --red2:#e04535;
+  --blue:#4a7fa8;
+  --text:#f0e8d8;
+  --text2:#c8b898;
+  --muted:#7a6848;
+  --muted2:#5a4830;
+}
+body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);min-height:100vh;padding-bottom:80px;}
 input,select,button{font-family:'Inter',sans-serif;}
 input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
-::-webkit-scrollbar{width:4px;height:4px;}
-::-webkit-scrollbar-track{background:#0b1120;}
-::-webkit-scrollbar-thumb{background:#1e2d45;border-radius:4px;}
+::-webkit-scrollbar{width:3px;height:3px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 
-/* Layout */
-#app{max-width:540px;margin:0 auto;}
-.page{padding:16px 14px;}
+#app{max-width:560px;margin:0 auto;}
+.page{padding:14px 12px;}
 
-/* Header */
-#header{background:#08101e;border-bottom:1px solid #111e30;padding:14px 16px 0;position:sticky;top:0;z-index:50;}
-.header-top{display:flex;align-items:center;gap:10px;margin-bottom:13px;}
-.logo-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#22c55e,#16a34a);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-.logo-title{font-weight:900;font-size:17px;color:#f1f5f9;letter-spacing:-0.02em;}
-.logo-sub{font-size:9px;color:#1e2d45;letter-spacing:0.14em;text-transform:uppercase;}
-.tier-pills{margin-left:auto;display:flex;gap:5px;}
-.tier-pill{text-align:center;border-radius:8px;padding:4px 8px;cursor:pointer;border:1px solid #111e30;background:#0b1120;}
-.tier-pill-num{font-size:13px;font-weight:800;font-family:‘JetBrains Mono’,monospace;}
-.tier-pill-lbl{font-size:8px;color:#1e2d45;letter-spacing:0.04em;}
+/* ── HEADER ── */
+#header{background:var(–surface);border-bottom:1px solid var(–border);padding:12px 14px 0;position:sticky;top:0;z-index:50;}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(–green),#2d7040);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 0 12px rgba(74,156,92,0.3);}
+.logo-title{font-family:‘Rajdhani’,sans-serif;font-weight:700;font-size:20px;color:var(–text);letter-spacing:1px;}
+.logo-sub{font-size:9px;color:var(–muted);letter-spacing:.1em;text-transform:uppercase;margin-top:1px;}
+.header-stats{margin-left:auto;display:flex;gap:5px;}
+.hstat{text-align:center;background:var(–card);border:1px solid var(–border);border-radius:8px;padding:4px 10px;cursor:pointer;transition:all .15s;}
+.hstat.act-fire{border-color:rgba(74,156,92,.5);background:rgba(74,156,92,.12);}
+.hstat.act-lean{border-color:rgba(200,146,42,.5);background:rgba(200,146,42,.12);}
+.hstat.act-skip{border-color:rgba(192,57,43,.5);background:rgba(192,57,43,.12);}
+.hstat-num{font-family:‘JetBrains Mono’,monospace;font-size:14px;font-weight:700;}
+.hstat-lbl{font-size:8px;color:var(–muted);letter-spacing:.08em;text-transform:uppercase;}
 
-/* Tabs */
-.tabs{display:flex;}
-.tab-btn{flex:1;padding:9px 0;border:none;cursor:pointer;background:transparent;border-bottom:2px solid transparent;color:#2d4060;font-weight:400;font-size:11px;display:flex;align-items:center;justify-content:center;gap:4px;transition:all 0.15s;}
-.tab-btn.active{border-bottom:2px solid #22c55e;color:#22c55e;font-weight:700;}
-.tab-icon{font-size:13px;}
+/* ── TABS ── */
+.tabs{display:flex;gap:0;}
+.tab-btn{flex:1;padding:9px 0;border:none;cursor:pointer;background:transparent;border-bottom:2px solid transparent;color:var(–muted);font-weight:500;font-size:11px;letter-spacing:.03em;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .15s;}
+.tab-btn.active{border-bottom-color:var(–green);color:var(–green2);font-weight:700;}
+.tab-btn:hover:not(.active){color:var(–text2);}
 
-/* Cards */
-.card{background:#0c1524;border:1px solid #1e2d45;border-radius:16px;padding:18px;margin-bottom:12px;}
+/* ── CARDS ── */
+.card{background:var(–card);border:1px solid var(–border);border-radius:16px;padding:16px;margin-bottom:10px;}
+.card-sm{background:var(–card);border:1px solid var(–border);border-radius:12px;padding:13px;}
 
-/* Forms */
-.field{margin-bottom:0;}
-.field label{display:block;font-size:11px;font-weight:700;color:#4a6080;letter-spacing:0.09em;text-transform:uppercase;margin-bottom:5px;}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px;}
-.span2{grid-column:span 2;}
+/* ── FORM ELEMENTS ── */
+.field-label{display:block;font-size:10px;font-weight:700;color:var(–muted);letter-spacing:.09em;text-transform:uppercase;margin-bottom:4px;}
 input[type=text],input[type=number],input[type=date],select{
-width:100%;background:#0b1120;border:1px solid #1e2d45;border-radius:10px;color:#e2e8f0;
-padding:11px 13px;font-size:14px;outline:none;appearance:none;-webkit-appearance:none;
+width:100%;background:var(–card2);border:1px solid var(–border2);border-radius:9px;
+color:var(–text);padding:10px 12px;font-size:14px;outline:none;appearance:none;-webkit-appearance:none;
 }
-select{cursor:pointer;background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’ viewBox=‘0 0 12 8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%234a6080’ stroke-width=‘1.5’ fill=‘none’ stroke-linecap=‘round’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
-input:focus,select:focus{border-color:#38bdf8;}
+select{background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’ viewBox=‘0 0 12 8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%237a6848’ stroke-width=‘1.5’ fill=‘none’ stroke-linecap=‘round’/%3E%3C/svg%3E”);background-repeat:no-repeat;background-position:right 11px center;padding-right:30px;}
+input:focus,select:focus{border-color:var(–green);box-shadow:0 0 0 2px rgba(74,156,92,.12);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;}
+.fgroup{margin-bottom:0;}
+.span2{grid-column:span 2;}
+.span3{grid-column:span 3;}
 
-/* Section headers */
-.sec-head{display:flex;align-items:center;gap:8px;margin:22px 0 13px;padding-bottom:8px;border-bottom:1px solid #111e30;}
-.sec-head-icon{font-size:15px;}
-.sec-head-title{font-size:12px;font-weight:700;color:#38bdf8;letter-spacing:0.06em;}
-.sec-head-sub{font-size:10px;color:#2d4060;margin-top:1px;}
+/* ── SECTION HEADS ── */
+.sec{display:flex;align-items:center;gap:8px;margin:18px 0 11px;padding-bottom:7px;border-bottom:1px solid var(–border);}
+.sec-icon{font-size:14px;}
+.sec-title{font-family:‘Rajdhani’,sans-serif;font-weight:700;font-size:13px;color:var(–amber);letter-spacing:.05em;text-transform:uppercase;}
+.sec-sub{font-size:10px;color:var(–muted);margin-left:4px;}
 
-/* Hand toggle */
-.hand-toggle{display:flex;gap:8px;}
-.hand-btn{flex:1;padding:10px 0;border-radius:9px;border:1.5px solid #1e2d45;background:#0b1120;color:#4a6080;font-weight:700;font-size:13px;cursor:pointer;transition:all 0.15s;}
-.hand-btn.active-rhb{border-color:rgba(245,158,11,0.6);background:rgba(245,158,11,0.1);color:#f59e0b;}
-.hand-btn.active-lhb{border-color:rgba(56,189,248,0.6);background:rgba(56,189,248,0.1);color:#38bdf8;}
-.hand-btn.active-sw{border-color:rgba(167,139,250,0.6);background:rgba(167,139,250,0.1);color:#a78bfa;}
+/* ── HAND TOGGLE ── */
+.hand-toggle{display:flex;gap:7px;margin-bottom:10px;}
+.hand-btn{flex:1;padding:9px 0;border-radius:9px;border:1.5px solid var(–border2);background:var(–card2);color:var(–muted);font-weight:700;font-size:13px;cursor:pointer;transition:all .15s;}
+.hand-btn.active-rhb{border-color:rgba(200,146,42,.6);background:rgba(200,146,42,.1);color:var(–amber2);}
+.hand-btn.active-lhb{border-color:rgba(74,127,168,.6);background:rgba(74,127,168,.1);color:var(–blue);}
+.hand-btn.active-sw{border-color:rgba(74,156,92,.6);background:rgba(74,156,92,.1);color:var(–green2);}
 
-/* Platoon indicator */
-.platoon-box{border-radius:9px;padding:8px 12px;font-size:12px;font-weight:600;margin-bottom:11px;}
+/* ── PLATOON BOX ── */
+.platoon-box{border-radius:9px;padding:8px 12px;font-size:12px;font-weight:600;margin-bottom:10px;display:none;}
 
-/* Info box */
-.info-box{background:#081018;border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#2d4060;line-height:1.7;}
+/* ── BUTTONS ── */
+.btn-primary{width:100%;padding:14px 0;border-radius:12px;border:none;background:linear-gradient(135deg,var(–green),#2d7040);color:#fff;font-weight:800;font-size:15px;cursor:pointer;letter-spacing:.03em;box-shadow:0 4px 16px rgba(74,156,92,.25);}
+.btn-primary:active{opacity:.85;}
+.btn-secondary{width:100%;padding:11px 0;border-radius:10px;background:var(–card2);border:1px solid var(–border2);color:var(–text2);font-weight:700;font-size:13px;cursor:pointer;}
+.btn-secondary:hover{border-color:var(–green);color:var(–green2);}
+.btn-outline{width:100%;padding:13px 0;border-radius:12px;background:var(–card);border:1.5px dashed var(–border2);color:var(–green2);font-size:13px;font-weight:700;cursor:pointer;}
+.btn-outline:hover{border-color:var(–green);background:rgba(74,156,92,.06);}
+.btn-sm{padding:5px 10px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid var(–border2);background:var(–card2);color:var(–muted);}
+.btn-sm:hover{border-color:var(–border);color:var(–text2);}
+.btn-icon{padding:6px 8px;border-radius:7px;font-size:12px;cursor:pointer;border:1px solid var(–border2);background:var(–card2);color:var(–muted);}
 
-/* Buttons */
-.btn-primary{width:100%;padding:14px 0;border-radius:12px;border:none;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;font-weight:800;font-size:15px;cursor:pointer;letter-spacing:0.02em;}
-.btn-primary:active{opacity:0.85;}
-.btn-secondary{width:100%;padding:12px 0;border-radius:10px;background:#0f2040;border:1px solid #38bdf8;color:#38bdf8;font-weight:700;font-size:13px;cursor:pointer;}
-.btn-outline{width:100%;padding:14px 0;border-radius:12px;background:#0b1120;border:1.5px dashed #1e2d45;color:#38bdf8;font-size:13px;font-weight:700;cursor:pointer;}
-.btn-sm{padding:5px 11px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid #1e2d45;background:#0b1120;color:#4a6080;}
-.btn-sm:active{opacity:0.7;}
-
-/* Grade card */
-.grade-card{border-radius:16px;overflow:hidden;margin-bottom:10px;border:1.5px solid;}
-.grade-card-header{padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:12px;}
-.grade-card-body{border-top:1px solid #111e30;padding:16px 16px 14px;}
+/* ── GRADE CARDS ── */
+.grade-card{border-radius:14px;overflow:hidden;margin-bottom:8px;border:1.5px solid;}
+.grade-hdr{padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:11px;}
+.grade-body{border-top:1px solid var(–border);padding:14px;}
 
 /* Score ring */
-.score-ring{position:relative;width:56px;height:56px;flex-shrink:0;}
-.score-ring svg{position:absolute;inset:0;}
-.score-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.score-num{font-size:15px;font-weight:900;line-height:1;font-family:‘JetBrains Mono’,monospace;}
-.score-denom{font-size:8px;letter-spacing:0.04em;}
+.ring{position:relative;width:52px;height:52px;flex-shrink:0;}
+.ring svg{position:absolute;inset:0;}
+.ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.ring-num{font-family:‘JetBrains Mono’,monospace;font-size:14px;font-weight:700;line-height:1;}
+.ring-den{font-size:8px;opacity:.6;}
 
 /* Score bars */
-.bar-row{margin-bottom:11px;}
-.bar-meta{display:flex;justify-content:space-between;margin-bottom:4px;align-items:baseline;}
-.bar-label{font-size:12px;color:#94a3b8;font-weight:500;}
-.bar-right{display:flex;align-items:center;gap:8px;}
-.bar-sub{font-size:10px;color:#2d4060;}
-.bar-score{font-size:12px;font-weight:700;font-family:‘JetBrains Mono’,monospace;}
-.bar-track{height:5px;background:#111e30;border-radius:4px;overflow:hidden;}
-.bar-fill{height:100%;border-radius:4px;transition:width 0.5s ease;}
+.bar-row{margin-bottom:9px;}
+.bar-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;}
+.bar-lbl{font-size:11px;color:var(–text2);}
+.bar-right{display:flex;align-items:center;gap:7px;}
+.bar-note{font-size:9px;color:var(–muted);}
+.bar-pts{font-size:11px;font-weight:700;font-family:‘JetBrains Mono’,monospace;}
+.bar-track{height:4px;background:var(–border);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s ease;}
 
-/* Filter pills */
-.filter-row{display:flex;gap:7px;margin-bottom:15px;overflow-x:auto;padding-bottom:2px;}
-.filter-pill{padding:6px 13px;border-radius:20px;cursor:pointer;white-space:nowrap;font-size:12px;font-weight:400;border:1px solid #111e30;background:#0b1120;color:#2d4060;}
-.filter-pill.active{font-weight:700;}
+/* Quick-stats strip on card */
+.qs-strip{display:flex;gap:0;margin-top:8px;border-radius:8px;overflow:hidden;border:1px solid var(–border);}
+.qs{flex:1;text-align:center;padding:5px 4px;background:var(–card2);border-right:1px solid var(–border);}
+.qs:last-child{border-right:none;}
+.qs-val{font-family:‘JetBrains Mono’,monospace;font-size:12px;font-weight:700;}
+.qs-lbl{font-size:8px;color:var(–muted);text-transform:uppercase;letter-spacing:.06em;margin-top:1px;}
 
-/* Empty state */
-.empty{text-align:center;padding:70px 0;}
-.empty-icon{font-size:40px;margin-bottom:12px;}
-.empty-title{font-size:14px;color:#4a6080;font-weight:600;}
-.empty-sub{font-size:12px;color:#1e2d45;margin-top:5px;}
-
-/* Pitcher card */
-.pitcher-card{background:#0c1524;border:1px solid #1e2d45;border-radius:14px;padding:13px 15px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;}
-.pitcher-hand-badge{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;font-family:‘JetBrains Mono’,monospace;flex-shrink:0;}
-
-/* Weight editor */
-.weight-row{display:flex;align-items:center;gap:10px;margin-bottom:13px;}
-.weight-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.weight-label{flex:1;font-size:12px;color:#64748b;}
-.weight-val{font-size:13px;font-weight:700;font-family:‘JetBrains Mono’,monospace;width:24px;text-align:right;}
-
-/* Discord toast */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1a2744;border:1px solid #38bdf8;border-radius:12px;padding:10px 18px;font-size:12px;color:#38bdf8;font-weight:600;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
-.toast.show{opacity:1;}
+/* Verdict badge */
+.verdict{border-radius:7px;padding:3px 10px;font-size:11px;font-weight:800;font-family:‘Rajdhani’,sans-serif;letter-spacing:.08em;}
 
 /* Result buttons */
-.result-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;}
-.result-btn{padding:5px 11px;border-radius:7px;font-size:11px;cursor:pointer;border:1px solid #1e2d45;background:#0b1120;color:#4a6080;}
+.result-row{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.res-btn{padding:6px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(–border2);background:var(–card2);color:var(–muted);transition:all .15s;}
+.res-btn:hover{border-color:var(–border);color:var(–text2);}
+.res-btn.active-hit{background:rgba(74,156,92,.15);border-color:rgba(74,156,92,.5);color:var(–green2);}
+.res-btn.active-miss{background:rgba(192,57,43,.12);border-color:rgba(192,57,43,.4);color:var(–red2);}
 
-input[type=range]{accent-color:#38bdf8;width:90px;}
+/* Pitcher card */
+.pit-card{background:var(–card);border:1px solid var(–border);border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:11px;}
+.pit-badge{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;font-family:‘JetBrains Mono’,monospace;flex-shrink:0;}
+
+/* Filters */
+.filter-row{display:flex;gap:6px;margin-bottom:13px;overflow-x:auto;padding-bottom:2px;}
+.filt{padding:6px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;font-size:11px;font-weight:500;border:1px solid var(–border);background:var(–card);color:var(–muted);transition:all .15s;}
+.filt.active{font-weight:700;}
+
+/* Slate summary bar */
+.slate-bar{background:var(–card);border:1px solid var(–border);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
+.slate-stat{text-align:center;flex:1;}
+.slate-num{font-family:‘Rajdhani’,sans-serif;font-size:22px;font-weight:700;line-height:1;}
+.slate-lbl{font-size:9px;color:var(–muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+.slate-div{width:1px;height:32px;background:var(–border);}
+
+/* Info box */
+.info-box{background:rgba(74,156,92,.06);border:1px solid rgba(74,156,92,.2);border-radius:8px;padding:8px 11px;margin-bottom:10px;font-size:11px;color:var(–muted);line-height:1.6;}
+
+/* Weights */
+.weight-row{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+.weight-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.weight-lbl{flex:1;font-size:12px;color:var(–text2);}
+.weight-val{font-size:12px;font-weight:700;font-family:‘JetBrains Mono’,monospace;width:22px;text-align:right;}
+input[type=range]{accent-color:var(–green);width:80px;}
+
+/* Toast */
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:var(–card);border:1px solid var(–green);border-radius:10px;padding:9px 16px;font-size:12px;color:var(–green2);font-weight:600;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+
+/* Empty */
+.empty{text-align:center;padding:60px 0;}
+.empty-icon{font-size:38px;margin-bottom:10px;opacity:.5;}
+.empty-title{font-size:14px;color:var(–muted);font-weight:600;}
+.empty-sub{font-size:12px;color:var(–muted2);margin-top:4px;}
+
+/* Duplicate / share buttons */
+.action-row{display:flex;gap:6px;margin-top:10px;}
+
+/* Tier config */
 </style>
 
 </head>
 <body>
-
 <div id="app">
   <div id="header">
-    <div class="header-top" style="display:flex;align-items:center;gap:10px;margin-bottom:13px;">
-      <div class="logo-icon">⚾</div>
+    <div class="header-top">
+      <div class="logo-mark">⚾</div>
       <div>
-        <div class="logo-title">HR Grader</div>
-        <div class="logo-sub">Daily Prop Analyzer</div>
+        <div class="logo-title">HR GRADER</div>
+        <div class="logo-sub">Pitch-Mix Matchup Engine</div>
       </div>
-      <div class="tier-pills" id="tierPills"></div>
+      <div class="header-stats" id="headerStats"></div>
     </div>
     <div class="tabs" id="tabs"></div>
   </div>
-
-  <div id="app-content" class="page"></div>
+  <div id="content" class="page"></div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────────────────
-const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1489357277432512564/idas0A_wv-jF5ki8KGj53cILB_GkBQ_Lde0MadmkItO_0Gr9LixoakYIdbTEqLsz0lw3";
+// ── DISCORD ───────────────────────────────────────────────────────────────
+const DISCORD_WEBHOOK="https://discord.com/api/webhooks/1489357277432512564/idas0A_wv-jF5ki8KGj53cILB_GkBQ_Lde0MadmkItO_0Gr9LixoakYIdbTEqLsz0lw3";
 
-// ── DATA ──────────────────────────────────────────────────────────────────────
+// ── TIER CONFIG ───────────────────────────────────────────────────────────
+const TIERS={
+  "🔥 FIRE":  {key:"fire",  color:"#5cb870",bg:"rgba(74,156,92,.09)", border:"rgba(74,156,92,.35)", minPct:.70, label:"Back it"},
+  "✅ LEAN":  {key:"lean",  color:"#c8922a",bg:"rgba(200,146,42,.08)",border:"rgba(200,146,42,.30)",minPct:.52, label:"Situational"},
+  "⏭ SKIP":  {key:"skip",  color:"#c0392b",bg:"rgba(192,57,43,.07)", border:"rgba(192,57,43,.25)", minPct:0,   label:"Pass"},
+};
+function getTier(pct){
+  if(pct>=.70)return "🔥 FIRE";
+  if(pct>=.52)return "✅ LEAN";
+  return "⏭ SKIP";
+}
+
+// ── PARKS ─────────────────────────────────────────────────────────────────
 const PARKS=[
-  {name:"Coors Field (COL)",factor:1.20},{name:"American Family Field (MIL)",factor:1.16},
-  {name:"Yankee Stadium (NYY)",factor:1.14},{name:"Minute Maid Park (HOU)",factor:1.13},
-  {name:"Great American Ball Park (CIN)",factor:1.12},{name:"Globe Life Field (TEX)",factor:1.08},
-  {name:"Citizens Bank Park (PHI)",factor:1.10},{name:"Camden Yards (BAL)",factor:1.07},
-  {name:"Wrigley Field (CHC)",factor:1.06},{name:"Chase Field (ARI)",factor:1.05},
-  {name:"Fenway Park (BOS)",factor:1.05},{name:"Truist Park (ATL)",factor:1.04},
-  {name:"Guaranteed Rate Field (CWS)",factor:1.03},{name:"Dodger Stadium (LAD)",factor:1.02},
-  {name:"Rogers Centre (TOR)",factor:1.01},{name:"Nationals Park (WSH)",factor:1.00},
-  {name:"Progressive Field (CLE)",factor:0.99},{name:"Angel Stadium (LAA)",factor:0.99},
-  {name:"Target Field (MIN)",factor:0.98},{name:"T-Mobile Park (SEA)",factor:0.97},
-  {name:"Busch Stadium (STL)",factor:0.97},{name:"Citi Field (NYM)",factor:0.96},
-  {name:"Kauffman Stadium (KC)",factor:0.96},{name:"Sutter Health Park (OAK)",factor:0.95},
-  {name:"loanDepot Park (MIA)",factor:0.94},{name:"Comerica Park (DET)",factor:0.94},
-  {name:"PNC Park (PIT)",factor:0.92},{name:"Petco Park (SD)",factor:0.91},
-  {name:"Tropicana Field (TB)",factor:0.90},{name:"Oracle Park (SF)",factor:0.88},
-  {name:"Oakland Coliseum (OAK)",factor:0.88},
+  {n:"Coors Field (COL)",f:1.20},{n:"American Family Field (MIL)",f:1.16},
+  {n:"Yankee Stadium (NYY)",f:1.14},{n:"Minute Maid Park (HOU)",f:1.13},
+  {n:"Great American Ball Park (CIN)",f:1.12},{n:"Citizens Bank Park (PHI)",f:1.10},
+  {n:"Globe Life Field (TEX)",f:1.08},{n:"Fenway Park (BOS)",f:1.05},
+  {n:"Camden Yards (BAL)",f:1.07},{n:"Wrigley Field (CHC)",f:1.06},
+  {n:"Chase Field (ARI)",f:1.05},{n:"Truist Park (ATL)",f:1.04},
+  {n:"Guaranteed Rate Field (CWS)",f:1.03},{n:"Dodger Stadium (LAD)",f:1.02},
+  {n:"Rogers Centre (TOR)",f:1.01},{n:"Nationals Park (WSH)",f:1.00},
+  {n:"Progressive Field (CLE)",f:0.99},{n:"Angel Stadium (LAA)",f:0.99},
+  {n:"Target Field (MIN)",f:0.98},{n:"Busch Stadium (STL)",f:0.97},
+  {n:"T-Mobile Park (SEA)",f:0.97},{n:"Citi Field (NYM)",f:0.96},
+  {n:"Kauffman Stadium (KC)",f:0.96},{n:"Sutter Health Park (OAK)",f:0.95},
+  {n:"loanDepot Park (MIA)",f:0.94},{n:"Comerica Park (DET)",f:0.94},
+  {n:"PNC Park (PIT)",f:0.92},{n:"Petco Park (SD)",f:0.91},
+  {n:"Tropicana Field (TB)",f:0.90},{n:"Oracle Park (SF)",f:0.88},
 ];
-const PITCH_TYPES=["None / Skip","Four-Seam Fastball","Sinker / Two-Seam","Cutter","Slider","Sweeper","Curveball","Changeup","Splitter"];
-const WIND_DIRS=["Blowing Out (toward OF)","Blowing In (toward home)","Crosswind","Calm / Dome"];
+const PITCH_TYPES=["None / Skip","Four-Seam FB","Sinker/Two-Seam","Cutter","Slider","Sweeper","Curveball","Changeup","Splitter"];
+const WIND_DIRS=["Blowing Out (↑ toward OF)","Blowing In (↓ toward home)","Crosswind","Calm / Dome"];
 const BVP_SOURCES=["Direct BvP (vs this pitcher)","vs RHP splits","vs LHP splits"];
 const PLATOON_WEAKNESS=["None / Unknown","Weak vs LHB","Weak vs RHB","Weak vs Both"];
-const LINEUP_SPOTS=["1","2","3","4","5","6","7","8","9"];
 
-const TIER_CFG={
-  Ideal:  {color:"#22c55e",bg:"rgba(34,197,94,0.08)",  border:"rgba(34,197,94,0.30)",  icon:"🟢"},
-  Favorable:{color:"#f59e0b",bg:"rgba(245,158,11,0.08)",border:"rgba(245,158,11,0.30)",icon:"✅"},
-  Average:{color:"#f97316",bg:"rgba(249,115,22,0.08)", border:"rgba(249,115,22,0.30)", icon:"🟡"},
-  Avoid:  {color:"#ef4444",bg:"rgba(239,68,68,0.08)",  border:"rgba(239,68,68,0.25)",  icon:"🔴"},
+// ── WEIGHTS ───────────────────────────────────────────────────────────────
+let W={
+  ev:        {label:"Exit Velocity",       max:18, color:"#5cb870"},
+  barrel:    {label:"Barrel %",            max:16, color:"#72d688"},
+  hrfb:      {label:"HR/FB %",             max:12, color:"#a8d888"},
+  batted:    {label:"Air Ball Ratio",      max:10, color:"#c8922a"},
+  pull:      {label:"Pull %",              max:7,  color:"#e8a830"},
+  hardHit:   {label:"Hard Hit %",          max:7,  color:"#d4b060"},
+  bvp:       {label:"BvP History",         max:14, color:"#a87848"},
+  platoon:   {label:"Platoon Edge",        max:8,  color:"#c084a0"},
+  pitcher:   {label:"Pitcher Vuln.",       max:18, color:"#c0392b"},
+  park:      {label:"Park Factor",         max:8,  color:"#4a7fa8"},
+  weather:   {label:"Weather",             max:6,  color:"#60a0c0"},
+  pitchBoost:{label:"Pitch Boost",         max:6,  color:"#8888e0"},
 };
+const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
-let WEIGHTS={
-  ev:        {label:"Exit Velocity",      max:18,color:"#38bdf8"},
-  barrel:    {label:"Barrel %",           max:14,color:"#a78bfa"},
-  hrfb:      {label:"HR/FB %",            max:12,color:"#f472b6"},
-  batted:    {label:"Air Ball Ratio",     max:10,color:"#fb923c"},
-  pull:      {label:"Pull %",             max:7, color:"#fbbf24"},
-  hardHit:   {label:"Hard Hit %",         max:7, color:"#4ade80"},
-  bvp:       {label:"BvP History",        max:14,color:"#f59e0b"},
-  platoon:   {label:"Platoon Advantage",  max:8, color:"#e879f9"},
-  pitcher:   {label:"Pitcher Vuln.",      max:18,color:"#f87171"},
-  park:      {label:"Park Factor",        max:10,color:"#34d399"},
-  weather:   {label:"Weather",            max:8, color:"#60a5fa"},
-  pitchBoost:{label:"Pitch Boost",        max:6, color:"#c084fc"},
-};
-const DEFAULT_WEIGHTS=JSON.parse(JSON.stringify(WEIGHTS));
-
-// ── STATE ─────────────────────────────────────────────────────────────────────
-let state={tab:"board",pitchers:[],batters:[],filter:"All",showPitcherForm:false};
+// ── STATE ─────────────────────────────────────────────────────────────────
+let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false};
+let BF={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10)};
+let PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
 
 function load(){
   try{
-    const b=localStorage.getItem("hrg-batters"); if(b) state.batters=JSON.parse(b);
-    const p=localStorage.getItem("hrg-pitchers"); if(p) state.pitchers=JSON.parse(p);
-    const w=localStorage.getItem("hrg-weights"); if(w) WEIGHTS=JSON.parse(w);
+    const b=localStorage.getItem("hrg2-batters");if(b)S.batters=JSON.parse(b);
+    const p=localStorage.getItem("hrg2-pitchers");if(p)S.pitchers=JSON.parse(p);
+    const w=localStorage.getItem("hrg2-weights");if(w)W=JSON.parse(w);
   }catch(e){}
 }
 function save(){
   try{
-    localStorage.setItem("hrg-batters",JSON.stringify(state.batters));
-    localStorage.setItem("hrg-pitchers",JSON.stringify(state.pitchers));
-    localStorage.setItem("hrg-weights",JSON.stringify(WEIGHTS));
+    localStorage.setItem("hrg2-batters",JSON.stringify(S.batters));
+    localStorage.setItem("hrg2-pitchers",JSON.stringify(S.pitchers));
+    localStorage.setItem("hrg2-weights",JSON.stringify(W));
   }catch(e){}
 }
 
-// ── SCORING ───────────────────────────────────────────────────────────────────
-function calcScore(batter,pitcher){
+// ── SCORING ENGINE ─────────────────────────────────────────────────────────
+function score(bat,pit){
   const n=v=>{const x=parseFloat(v);return isNaN(x)?null:x;};
   const pts=(raw,max)=>Math.max(0,Math.min(Math.round(raw*max),max));
-  const bd={};
+  const B={};
 
-  const ev=n(batter.avgEV);
-  bd.ev=ev===null?{score:0,label:"No data"}:{
-    score:pts(ev>=97?1:ev>=95?.88:ev>=93?.72:ev>=91?.52:ev>=89?.32:ev>=87?.16:.06,WEIGHTS.ev.max),
-    label:ev>=96?"Elite":ev>=93?"Strong":ev>=90?"Average":"Weak"
+  // EV — vs pitch mix, floors run lower so thresholds adjusted
+  const ev=n(bat.avgEV);
+  B.ev=ev===null?{s:0,l:"—"}:{
+    s:pts(ev>=97?1:ev>=95?.90:ev>=93?.75:ev>=91?.56:ev>=89?.36:ev>=87?.18:.06,W.ev.max),
+    l:ev>=96?"Elite":ev>=93?"Strong":ev>=90?"Avg":"Soft"
   };
 
-  const bar=n(batter.barrelPct);
-  bd.barrel=bar===null?{score:0,label:"No data"}:{
-    score:pts(bar>=22?1:bar>=18?.85:bar>=14?.68:bar>=10?.48:bar>=7?.28:bar>=4?.14:.05,WEIGHTS.barrel.max),
-    label:bar>=20?"Elite":bar>=14?"Strong":bar>=9?"Average":"Weak"
+  // Barrel % — vs pitch mix, 6%+ meaningful
+  const bar=n(bat.barrelPct);
+  B.barrel=bar===null?{s:0,l:"—"}:{
+    s:pts(bar>=22?1:bar>=18?.87:bar>=14?.70:bar>=10?.50:bar>=7?.30:bar>=4?.14:.04,W.barrel.max),
+    l:bar>=20?"Elite":bar>=14?"Strong":bar>=9?"Avg":"Soft"
   };
 
-  const hrfb=n(batter.hrFbPct);
-  bd.hrfb=hrfb===null?{score:0,label:"No data"}:{
-    score:pts(hrfb>=28?1:hrfb>=22?.85:hrfb>=17?.68:hrfb>=12?.48:hrfb>=8?.28:.10,WEIGHTS.hrfb.max),
-    label:hrfb>=24?"Elite":hrfb>=17?"Strong":hrfb>=10?"Average":"Weak"
+  // HR/FB
+  const hrfb=n(bat.hrFbPct);
+  B.hrfb=hrfb===null?{s:0,l:"—"}:{
+    s:pts(hrfb>=28?1:hrfb>=22?.87:hrfb>=17?.70:hrfb>=12?.50:hrfb>=8?.28:.08,W.hrfb.max),
+    l:hrfb>=24?"Elite":hrfb>=17?"Strong":hrfb>=10?"Avg":"Soft"
   };
 
-  const fb=n(batter.fbPct),gb=n(batter.gbPct),ld=n(batter.ldPct);
+  // Air ratio = (FB+LD) / GB — vs pitch mix floors run lower
+  const fb=n(bat.fbPct),gb=n(bat.gbPct),ld=n(bat.ldPct);
   if(fb!==null&&gb!==null){
-    const air=fb+(ld||0),ratio=gb>0?air/gb:air;
-    bd.batted={score:pts(ratio>=2.8?1:ratio>=2.2?.85:ratio>=1.7?.67:ratio>=1.2?.45:ratio>=.8?.24:.08,WEIGHTS.batted.max),
-      label:ratio>=2.5?"Elite Air":ratio>=1.8?"Good Air":ratio>=1.2?"Neutral":"GB Heavy"};
-  }else bd.batted={score:0,label:"No data"};
+    const air=fb+(ld||0),r=gb>0?air/gb:air;
+    B.batted={s:pts(r>=2.8?1:r>=2.2?.87:r>=1.7?.68:r>=1.2?.46:r>=.8?.24:.06,W.batted.max),
+      l:r>=2.5?"Elite Air":r>=1.8?"Good Air":r>=1.2?"Neutral":"GB Heavy",
+      raw:r.toFixed(2)};
+  }else B.batted={s:0,l:"—"};
 
-  const pull=n(batter.pullPct);
-  bd.pull=pull===null?{score:0,label:"No data"}:{
-    score:pts(pull>=52?1:pull>=46?.82:pull>=40?.62:pull>=34?.40:pull>=28?.20:.08,WEIGHTS.pull.max),
-    label:pull>=48?"Elite":pull>=42?"Strong":pull>=35?"Average":"Low"
+  // Pull %
+  const pull=n(bat.pullPct);
+  B.pull=pull===null?{s:0,l:"—"}:{
+    s:pts(pull>=50?1:pull>=44?.82:pull>=38?.62:pull>=32?.40:pull>=26?.20:.06,W.pull.max),
+    l:pull>=46?"Elite":pull>=40?"Strong":pull>=33?"Avg":"Low"
   };
 
-  const hh=n(batter.hardHitPct);
-  bd.hardHit=hh===null?{score:0,label:"No data"}:{
-    score:pts(hh>=58?1:hh>=52?.82:hh>=46?.62:hh>=40?.40:hh>=34?.20:.08,WEIGHTS.hardHit.max),
-    label:hh>=54?"Elite":hh>=48?"Strong":hh>=42?"Average":"Low"
+  // Hard Hit %
+  const hh=n(bat.hardHitPct);
+  B.hardHit=hh===null?{s:0,l:"—"}:{
+    s:pts(hh>=58?1:hh>=52?.82:hh>=46?.62:hh>=40?.40:hh>=34?.20:.06,W.hardHit.max),
+    l:hh>=54?"Elite":hh>=48?"Strong":hh>=42?"Avg":"Low"
   };
 
-  const hrB=n(batter.hrVsPitcher),abB=n(batter.abVsPitcher),slgB=n(batter.slgVsPitcher);
-  if(batter.bvpSource!=="Direct BvP (vs this pitcher)"){
-    const iso=n(batter.iso);
-    bd.bvp=iso===null?{score:0,label:"No data"}:{
-      score:pts(iso>=.32?1:iso>=.27?.80:iso>=.22?.60:iso>=.17?.40:iso>=.12?.22:.08,WEIGHTS.bvp.max),
-      label:batter.bvpSource
+  // BvP — direct or handedness splits
+  const hrB=n(bat.hrVsPitcher),abB=n(bat.abVsPitcher),slgB=n(bat.slgVsPitcher);
+  if(bat.bvpSource!=="Direct BvP (vs this pitcher)"){
+    const iso=n(bat.iso);
+    B.bvp=iso===null?{s:0,l:"Splits mode"}:{
+      s:pts(Math.min((iso>=.32?1:iso>=.27?.80:iso>=.22?.60:iso>=.17?.40:iso>=.12?.22:.06)*.80,1),W.bvp.max),
+      l:`Splits: ISO ${iso}`
     };
   }else if(hrB!==null&&abB!==null&&abB>0){
-    let r=.15;
-    if(hrB>=4)r=1;else if(hrB>=3)r=.88;else if(hrB>=2)r=.72;else if(hrB>=1)r=.52;
-    if(slgB!==null&&slgB>=.65)r=Math.min(r+.1,1);
+    let r=hrB>=4?1:hrB>=3?.88:hrB>=2?.72:hrB>=1?.52:.15;
+    if(slgB!==null&&slgB>=.65)r=Math.min(r+.10,1);
     if(abB<8)r*=.75;
-    bd.bvp={score:pts(r,WEIGHTS.bvp.max),label:hrB>=3?"Dominant":hrB>=2?"Strong":hrB>=1?"Some history":"No HRs vs P"};
-  }else bd.bvp={score:0,label:"No data"};
+    B.bvp={s:pts(r,W.bvp.max),l:hrB>=3?"Owns pitcher":hrB>=2?"Strong BvP":hrB>=1?"Some history":"No BvP HRs"};
+  }else B.bvp={s:0,l:"No data"};
 
   // Platoon
-  const bH=batter.hand,pH=pitcher?.hand||"",pW=pitcher?.platoonWeakness||"None / Unknown";
-  let plRaw=.35;
-  if(bH==="LHB"&&pH==="RHP")plRaw=.60;
-  else if(bH==="RHB"&&pH==="LHP")plRaw=.60;
-  else if(bH==="Switch")plRaw=.55;
-  else if((bH==="RHB"&&pH==="RHP")||(bH==="LHB"&&pH==="LHP"))plRaw=.25;
-  if(pW==="Weak vs LHB"&&(bH==="LHB"||bH==="Switch"))plRaw=Math.min(plRaw+.32,1);
-  if(pW==="Weak vs RHB"&&(bH==="RHB"||bH==="Switch"))plRaw=Math.min(plRaw+.32,1);
-  if(pW==="Weak vs Both")plRaw=Math.min(plRaw+.20,1);
-  bd.platoon={score:pts(plRaw,WEIGHTS.platoon.max),label:plRaw>=.85?"Elite Edge":plRaw>=.65?"Clear Edge":plRaw>=.45?"Neutral":plRaw>=.30?"Slight Disadv.":"Disadvantage"};
+  const bH=bat.hand,pH=pit?.hand||"",pW=pit?.platoonWeakness||"None / Unknown";
+  let pl=.35;
+  if(bH==="LHB"&&pH==="RHP")pl=.62;
+  else if(bH==="RHB"&&pH==="LHP")pl=.62;
+  else if(bH==="Switch")pl=.52;
+  else if((bH==="RHB"&&pH==="RHP")||(bH==="LHB"&&pH==="LHP"))pl=.22;
+  if(pW==="Weak vs LHB"&&(bH==="LHB"||bH==="Switch"))pl=Math.min(pl+.32,1);
+  if(pW==="Weak vs RHB"&&(bH==="RHB"||bH==="Switch"))pl=Math.min(pl+.32,1);
+  if(pW==="Weak vs Both")pl=Math.min(pl+.22,1);
+  B.platoon={s:pts(pl,W.platoon.max),l:pl>=.85?"Elite Edge":pl>=.65?"Clear Edge":pl>=.44?"Neutral":"Slight disadvantage"};
 
-  // Pitcher vuln
-  if(pitcher){
-    const iP=n(pitcher.isoAllowed),bP=n(pitcher.barrelAllowed),h9=n(pitcher.hr9),era=n(pitcher.era),fbA=n(pitcher.fbPctAllowed);
+  // Pitcher vulnerability
+  if(pit){
+    const iP=n(pit.isoAllowed),bP=n(pit.barrelAllowed),h9=n(pit.hr9),era=n(pit.era),fbA=n(pit.fbPctAllowed);
     let r=0;
     if(iP!==null)r+=iP>=.24?.30:iP>=.19?.22:iP>=.15?.14:iP>=.11?.07:.02;
     if(bP!==null)r+=bP>=14?.28:bP>=10?.20:bP>=7?.13:bP>=4?.06:.02;
     if(h9!==null)r+=h9>=1.8?.24:h9>=1.4?.18:h9>=1.0?.12:h9>=.7?.07:.02;
     if(era!==null)r+=era>=5?.12:era>=4.2?.08:era>=3.5?.05:.02;
     if(fbA!==null)r+=fbA>=42?.06:fbA>=36?.04:.01;
-    bd.pitcher={score:pts(Math.min(r,1),WEIGHTS.pitcher.max),label:r>=.80?"Very Hittable":r>=.58?"Hittable":r>=.36?"Average":"Tough"};
-  }else bd.pitcher={score:0,label:"No pitcher"};
+    B.pitcher={s:pts(Math.min(r,1),W.pitcher.max),l:r>=.80?"Very Hittable":r>=.58?"Hittable":r>=.36?"Avg":"Tough"};
+  }else B.pitcher={s:0,l:"No pitcher linked"};
 
   // Park
-  const park=PARKS.find(p=>p.name===batter.park);
-  if(park){
-    const f=park.factor;
-    bd.park={score:pts(f>=1.18?1:f>=1.12?.85:f>=1.06?.66:f>=1.00?.46:f>=.95?.26:f>=.90?.12:.04,WEIGHTS.park.max),
-      label:f>=1.14?"Elite":f>=1.05?"Good":f>=.98?"Average":"Poor"};
-  }else bd.park={score:0,label:"No data"};
+  const pk=PARKS.find(p=>p.n===bat.park);
+  if(pk){
+    const f=pk.f;
+    B.park={s:pts(f>=1.18?1:f>=1.12?.85:f>=1.06?.65:f>=1.00?.44:f>=.95?.24:f>=.90?.10:.02,W.park.max),
+      l:f>=1.14?"🔥 HR Park":f>=1.04?"Good":f>=.97?"Neutral":"Suppressive"};
+  }else B.park={s:0,l:"—"};
 
   // Weather
-  const wind=n(batter.windSpeed),temp=n(batter.temp);
+  const wind=n(bat.windSpeed),temp=n(bat.temp);
   let wx=.40;
   if(wind!==null){
-    if(batter.windDir==="Blowing Out (toward OF)")wx+=wind>=20?.45:wind>=14?.32:wind>=8?.18:wind>=4?.08:.02;
-    else if(batter.windDir==="Blowing In (toward home)")wx-=wind>=18?.32:wind>=10?.20:wind>=5?.10:.02;
-    else if(batter.windDir==="Calm / Dome")wx+=.08;
+    if(bat.windDir==="Blowing Out (↑ toward OF)")wx+=wind>=20?.45:wind>=14?.32:wind>=8?.18:wind>=4?.08:.02;
+    else if(bat.windDir==="Blowing In (↓ toward home)")wx-=wind>=18?.32:wind>=10?.20:wind>=5?.10:.02;
+    else if(bat.windDir==="Calm / Dome")wx+=.08;
   }
   if(temp!==null)wx+=temp>=88?.18:temp>=78?.10:temp>=65?.04:temp<50?-.14:0;
   wx=Math.max(0,Math.min(wx,1));
-  bd.weather={score:pts(wx,WEIGHTS.weather.max),label:wx>=.78?"Ideal":wx>=.52?"Favorable":wx>=.32?"Neutral":"Unfavorable"};
+  B.weather={s:pts(wx,W.weather.max),l:wx>=.78?"Ideal":wx>=.52?"Favorable":wx>=.32?"Neutral":"Unfavorable"};
 
   // Pitch boost
-  const pb=n(batter.batterBarrelVsPitch),pu=n(batter.pitchUsagePct),phr=n(batter.batterHrVsPitch);
-  if(pb!==null&&pu!==null&&batter.pitchType&&batter.pitchType!=="None / Skip"){
+  const pb=n(bat.batterBarrelVsPitch),pu=n(bat.pitchUsagePct),phr=n(bat.batterHrVsPitch);
+  if(pb!==null&&pu!==null&&bat.pitchType&&bat.pitchType!=="None / Skip"){
     let r=pb>=24&&pu>=48?1:pb>=18&&pu>=36?.72:pb>=12&&pu>=24?.46:pb>=8?.22:.06;
     if(phr!==null&&phr>=2)r=Math.min(r+.22,1);
-    bd.pitchBoost={score:pts(r,WEIGHTS.pitchBoost.max),label:r>=.80?"Strong Boost":r>=.50?"Mild Boost":"Minimal"};
-  }else bd.pitchBoost={score:0,label:"N/A"};
+    B.pitchBoost={s:pts(r,W.pitchBoost.max),l:r>=.80?"Strong boost":r>=.50?"Mild boost":"Minimal"};
+  }else B.pitchBoost={s:0,l:"N/A"};
 
-  const total=Object.values(bd).reduce((s,v)=>s+v.score,0);
-  const maxTotal=Object.values(WEIGHTS).reduce((s,w)=>s+w.max,0);
+  const total=Object.values(B).reduce((a,v)=>a+v.s,0);
+  const maxTotal=Object.values(W).reduce((a,w)=>a+w.max,0);
   const pct=total/maxTotal;
-  const tier=pct>=.70?"Ideal":pct>=.55?"Favorable":pct>=.40?"Average":"Avoid";
-  return{total,maxTotal,pct,tier,breakdown:bd};
+  const tier=getTier(pct);
+  return{total,maxTotal,pct,tier,B};
 }
 
-// ── DISCORD ───────────────────────────────────────────────────────────────────
-async function postToDiscord(batter,pitcher,grade){
-  const t=TIER_CFG[grade.tier];
-  const bar=(score,max)=>{const p=Math.round(score/max*10);return "█".repeat(p)+"░".repeat(10-p);};
-  const fields=Object.entries(WEIGHTS).map(([k,w])=>{
-    const bd=grade.breakdown[k];
-    if(!bd||bd.score===0)return null;
-    return {name:`${w.label}`,value:`${bar(bd.score,w.max)} ${bd.score}/${w.max} — ${bd.label}`,inline:false};
+// ── DISCORD POST ──────────────────────────────────────────────────────────
+async function postDiscord(bat,pit,gr){
+  const tc=TIERS[gr.tier];
+  const bar=(s,m)=>{const p=Math.round(s/m*10);return"█".repeat(p)+"░".repeat(10-p);};
+  const fields=Object.entries(W).map(([k,w])=>{
+    const b=gr.B[k];if(!b||b.s===0)return null;
+    return{name:w.label,value:`${bar(b.s,w.max)} ${b.s}/${w.max} — ${b.l}`,inline:false};
   }).filter(Boolean);
-
-  const platoonStr=batter.hand&&pitcher?.hand?`${batter.hand} vs ${pitcher.hand}`:"";
   const embed={
-    title:`${t.icon} ${batter.name} — HR Prop Grade`,
-    description:`**Score: ${grade.total}/${grade.maxTotal}** (${Math.round(grade.pct*100)}%) · **${grade.tier.toUpperCase()}**`,
-    color:parseInt(t.color.replace("#",""),16),
+    title:`${gr.tier} ${bat.name} — HR Prop`,
+    description:`**Score: ${gr.total}/${gr.maxTotal}** (${Math.round(gr.pct*100)}%)\n${bat.name} vs ${pit?.name||"?"} (${pit?.hand||"?"}) · ${bat.park?bat.park.split("(")[0].trim():"—"}`,
+    color:parseInt(tc.color.replace("#",""),16),
     fields:[
-      {name:"Matchup",value:`vs ${pitcher?.name||"?"} (${pitcher?.hand||"?"})\n${batter.park||"—"}${platoonStr?"\n"+platoonStr:""}`,inline:true},
-      {name:"Date",value:batter.date||new Date().toLocaleDateString(),inline:true},
+      {name:"EV",value:`${bat.avgEV||"—"} mph`,inline:true},
+      {name:"Barrel%",value:`${bat.barrelPct||"—"}%`,inline:true},
+      {name:"HR/9 vs",value:pit?.hr9||"—",inline:true},
+      {name:"Lineup Spot",value:bat.lineupSpot||"—",inline:true},
+      {name:"Date",value:bat.date||"—",inline:true},
+      {name:"Platoon",value:`${bat.hand||"?"} vs ${pit?.hand||"?"}`,inline:true},
       ...fields,
     ],
-    footer:{text:"HR Grader · "+new Date().toLocaleTimeString()},
+    footer:{text:"HR Grader · Pitch-Mix Engine · "+new Date().toLocaleTimeString()},
   };
   try{
     await fetch(DISCORD_WEBHOOK,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({embeds:[embed]})});
-    showToast("✅ Posted to Discord!");
-  }catch(e){showToast("⚠️ Discord post failed");}
+    toast("✅ Posted to Discord!");
+  }catch(e){toast("⚠️ Discord failed — check webhook");}
 }
 
-function showToast(msg){
+// ── UTILS ─────────────────────────────────────────────────────────────────
+function toast(msg,dur=2800){
   const t=document.getElementById("toast");
   t.textContent=msg;t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),3000);
+  setTimeout(()=>t.classList.remove("show"),dur);
 }
-
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-function el(tag,cls,html,style){
+function el(tag,cls,html){
   const e=document.createElement(tag);
   if(cls)e.className=cls;
   if(html!==undefined)e.innerHTML=html;
-  if(style)Object.assign(e.style,style);
   return e;
 }
-function sel(opts,val,placeholder){
-  const s=document.createElement("select");
-  if(placeholder){const o=document.createElement("option");o.value="";o.textContent=placeholder;s.appendChild(o);}
-  opts.forEach(o=>{const op=document.createElement("option");op.value=typeof o==="object"?o.v:o;op.textContent=typeof o==="object"?o.l:o;if(op.value==val)op.selected=true;s.appendChild(op);});
-  return s;
+function mk(tag,style,html){
+  const e=document.createElement(tag);
+  if(style)Object.assign(e.style,style);
+  if(html!==undefined)e.innerHTML=html;
+  return e;
 }
 function inp(type,val,ph){
   const i=document.createElement("input");
-  i.type=type;i.value=val||"";i.placeholder=ph||"";
+  i.type=type;i.value=val||"";if(ph)i.placeholder=ph;
   return i;
 }
-function field(label,child,span){
+function mkSel(opts,val,ph){
+  const s=document.createElement("select");
+  if(ph){const o=document.createElement("option");o.value="";o.textContent=ph;s.appendChild(o);}
+  opts.forEach(o=>{
+    const op=document.createElement("option");
+    op.value=typeof o==="object"?o.v:o;
+    op.textContent=typeof o==="object"?o.l:o;
+    if(op.value===(val||""))op.selected=true;
+    s.appendChild(op);
+  });
+  return s;
+}
+function fld(label,child,span){
   const d=document.createElement("div");
   if(span)d.style.gridColumn=`span ${span}`;
-  const l=document.createElement("label");l.textContent=label;l.className="field";
+  const l=mk("label",null,label);l.className="field-label";
   d.appendChild(l);d.appendChild(child);return d;
 }
-function secHead(icon,title,sub){
-  const d=el("div","sec-head");
-  d.innerHTML=`<span class="sec-head-icon">${icon}</span><div><div class="sec-head-title">${title}</div>${sub?`<div class="sec-head-sub">${sub}</div>`:""}`;
+function g2(...items){const d=el("div","grid2");items.forEach(i=>d.appendChild(i));return d;}
+function g3(...items){const d=el("div","grid3");items.forEach(i=>d.appendChild(i));return d;}
+function sec(icon,title,sub){
+  const d=el("div","sec");
+  d.innerHTML=`<span class="sec-icon">${icon}</span><span class="sec-title">${title}</span>${sub?`<span class="sec-sub">${sub}</span>`:""}`;
   return d;
 }
-function grid2(...fields){
-  const g=el("div","grid2");fields.forEach(f=>g.appendChild(f));return g;
-}
 
-// ── RENDER ────────────────────────────────────────────────────────────────────
-function render(){
-  renderHeader();
-  renderContent();
-}
+// ── RENDER ────────────────────────────────────────────────────────────────
+function render(){rHeader();rContent();}
 
-function renderHeader(){
-  // Tier pills
-  const pills=document.getElementById("tierPills");
-  pills.innerHTML="";
-  const counts={Ideal:0,Favorable:0,Average:0,Avoid:0};
-  state.batters.forEach(b=>{if(b.grade?.tier)counts[b.grade.tier]++;});
-  Object.entries(counts).forEach(([t,c])=>{
-    if(c===0)return;
-    const tc=TIER_CFG[t];
-    const d=el("div","tier-pill");
-    d.style.cssText+=`;background:${state.filter===t?tc.color+"18":"#0b1120"};border-color:${state.filter===t?tc.color+"55":"#111e30"}`;
-    d.innerHTML=`<div class="tier-pill-num" style="color:${tc.color}">${c}</div><div class="tier-pill-lbl">${t.slice(0,3).toUpperCase()}</div>`;
-    d.onclick=()=>{state.filter=state.filter===t?"All":t;render();};
-    pills.appendChild(d);
+function rHeader(){
+  // Stats
+  const hs=document.getElementById("headerStats");hs.innerHTML="";
+  const cnt={"🔥 FIRE":0,"✅ LEAN":0,"⏭ SKIP":0};
+  S.batters.forEach(b=>{if(b.grade?.tier)cnt[b.grade.tier]=(cnt[b.grade.tier]||0)+1;});
+  const map=[["🔥 FIRE","act-fire","FIRE"],["✅ LEAN","act-lean","LEAN"],["⏭ SKIP","act-skip","SKIP"]];
+  map.forEach(([k,cls,lbl])=>{
+    if(!cnt[k])return;
+    const tc=TIERS[k];
+    const d=el("div","hstat"+(S.filter===k?" "+cls:""));
+    d.innerHTML=`<div class="hstat-num" style="color:${tc.color}">${cnt[k]}</div><div class="hstat-lbl">${lbl}</div>`;
+    d.onclick=()=>{S.filter=S.filter===k?"All":k;render();};
+    hs.appendChild(d);
   });
 
   // Tabs
-  const tabs=document.getElementById("tabs");
-  tabs.innerHTML="";
-  [{id:"board",icon:"📊",label:"Board"},{id:"add",icon:"＋",label:"Add Batter"},{id:"pitchers",icon:"⚾",label:"Pitchers"},{id:"weights",icon:"⚙",label:"Weights"}].forEach(t=>{
-    const b=el("button","tab-btn"+(state.tab===t.id?" active":""),`<span class="tab-icon">${t.icon}</span>${t.label}`);
-    b.onclick=()=>{state.tab=t.id;render();};
+  const tabs=document.getElementById("tabs");tabs.innerHTML="";
+  [{id:"board",icon:"📊",l:"Board"},{id:"add",icon:"＋",l:"Add"},{id:"pitchers",icon:"⚾",l:"Pitchers"},{id:"weights",icon:"⚙",l:"Settings"}].forEach(t=>{
+    const b=el("button","tab-btn"+(S.tab===t.id?" active":""),`<span style="font-size:13px">${t.icon}</span>${t.l}`);
+    b.onclick=()=>{S.tab=t.id;render();};
     tabs.appendChild(b);
   });
 }
 
-function renderContent(){
-  const c=document.getElementById("app-content");
-  c.innerHTML="";
-  if(state.tab==="board")renderBoard(c);
-  else if(state.tab==="add")renderAddBatter(c);
-  else if(state.tab==="pitchers")renderPitchers(c);
-  else if(state.tab==="weights")renderWeights(c);
+function rContent(){
+  const c=document.getElementById("content");c.innerHTML="";
+  if(S.tab==="board")rBoard(c);
+  else if(S.tab==="add")rAdd(c);
+  else if(S.tab==="pitchers")rPitchers(c);
+  else if(S.tab==="weights")rWeights(c);
 }
 
-// ── BOARD ─────────────────────────────────────────────────────────────────────
-function renderBoard(c){
+// ── BOARD ─────────────────────────────────────────────────────────────────
+function rBoard(c){
   // Filter pills
   const fr=el("div","filter-row");
-  const counts={All:state.batters.length,Ideal:0,Favorable:0,Average:0,Avoid:0};
-  state.batters.forEach(b=>{if(b.grade?.tier)counts[b.grade.tier]++;});
-  ["All","Ideal","Favorable","Average","Avoid"].forEach(f=>{
-    const tc=f==="All"?null:TIER_CFG[f];
-    const p=el("div","filter-pill"+(state.filter===f?" active":""),`${f}${counts[f]>0?` (${counts[f]})`:""}`);
-    if(state.filter===f&&tc){p.style.cssText+=`;color:${tc.color};background:${tc.color}18;border-color:${tc.color}66`;}
-    else if(state.filter===f){p.style.cssText+=`;color:#f1f5f9;background:#1e293b;border-color:#334155`;}
-    p.onclick=()=>{state.filter=f;render();};
+  const cnt={All:S.batters.length,"🔥 FIRE":0,"✅ LEAN":0,"⏭ SKIP":0};
+  S.batters.forEach(b=>{if(b.grade?.tier)cnt[b.grade.tier]=(cnt[b.grade.tier]||0)+1;});
+  ["All","🔥 FIRE","✅ LEAN","⏭ SKIP"].forEach(f=>{
+    const tc=f==="All"?null:TIERS[f];
+    const p=el("div","filt"+(S.filter===f?" active":""),`${f} ${cnt[f]||cnt["All"]||0}`);
+    if(S.filter===f&&tc){p.style.color=tc.color;p.style.background=tc.bg;p.style.borderColor=tc.border;}
+    else if(S.filter===f){p.style.color="var(--text)";p.style.background="var(--card2)";p.style.borderColor="var(--border2)";}
+    p.onclick=()=>{S.filter=f;render();};
     fr.appendChild(p);
   });
   c.appendChild(fr);
 
-  const filtered=state.filter==="All"?state.batters:state.batters.filter(b=>b.grade?.tier===state.filter);
-  const sorted=[...filtered].sort((a,b)=>b.grade.total-a.grade.total);
+  const all=S.filter==="All"?S.batters:S.batters.filter(b=>b.grade?.tier===S.filter);
+  const sorted=[...all].sort((a,b)=>b.grade.total-a.grade.total);
 
-  if(sorted.length===0){
-    const emp=el("div","empty");
-    emp.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">No picks yet today</div><div class="empty-sub">Add pitchers first, then grade batters</div>`;
-    const btn=el("button","btn-sm",state.pitchers.length?"Add Batter →":"Add Pitchers →");
-    btn.style.cssText="margin-top:16px;padding:10px 22px;color:#38bdf8;border-color:#1e2d45;";
-    btn.onclick=()=>{state.tab=state.pitchers.length?"add":"pitchers";render();};
-    emp.appendChild(btn);c.appendChild(emp);return;
+  // Slate summary
+  if(S.batters.length>0){
+    const fires=S.batters.filter(b=>b.grade?.tier==="🔥 FIRE");
+    const leans=S.batters.filter(b=>b.grade?.tier==="✅ LEAN");
+    const hits=S.batters.filter(b=>b.result==="Hit HR ✅");
+    const graded=S.batters.filter(b=>b.result&&b.result!=="Pending");
+    const bar=el("div","slate-bar");
+    bar.innerHTML=`
+      <div class="slate-stat"><div class="slate-num" style="color:var(--green2)">${fires.length}</div><div class="slate-lbl">🔥 Fire</div></div>
+      <div class="slate-div"></div>
+      <div class="slate-stat"><div class="slate-num" style="color:var(--amber)">${leans.length}</div><div class="slate-lbl">✅ Lean</div></div>
+      <div class="slate-div"></div>
+      <div class="slate-stat"><div class="slate-num" style="color:var(--text)">${S.batters.length}</div><div class="slate-lbl">Total</div></div>
+      <div class="slate-div"></div>
+      <div class="slate-stat"><div class="slate-num" style="color:${hits.length>0?'var(--green2)':'var(--muted)'}">${graded.length?Math.round(hits.length/graded.length*100)+'%':'—'}</div><div class="slate-lbl">Hit Rate</div></div>`;
+    c.appendChild(bar);
   }
 
-  sorted.forEach(b=>c.appendChild(makeGradeCard(b)));
+  if(sorted.length===0){
+    const e=el("div","empty");
+    e.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">No picks yet</div><div class="empty-sub">${S.pitchers.length?"Tap ＋ Add to grade a batter":"Add pitchers first, then grade matchups"}</div>`;
+    const btn=el("button","btn-outline",S.pitchers.length?"＋ Add Your First Pick":"⚾ Add Pitchers First");
+    btn.style.marginTop="16px";
+    btn.onclick=()=>{S.tab=S.pitchers.length?"add":"pitchers";render();};
+    e.appendChild(btn);c.appendChild(e);return;
+  }
+
+  sorted.forEach(b=>c.appendChild(mkCard(b)));
 }
 
-function makeGradeCard(batter){
-  const g=batter.grade;
-  const t=TIER_CFG[g.tier]||TIER_CFG.Avoid;
+function mkCard(bat){
+  const g=bat.grade;
+  const tc=TIERS[g.tier];
   const pct=Math.round(g.pct*100);
   const card=el("div","grade-card");
-  card.style.cssText=`background:${t.bg};border-color:${t.border};`;
+  card.style.background=tc.bg;
+  card.style.borderColor=tc.border;
 
-  // Header
-  const hdr=el("div","grade-card-header");
-  const circ=2*Math.PI*24; // circumference
-  const dash=Math.round(pct*circ/100);
-  const handColor=batter.hand==="LHB"?"#38bdf8":batter.hand==="RHB"?"#f59e0b":"#a78bfa";
+  // SVG ring
+  const circ=2*Math.PI*22;
+  const dash=Math.round(pct/100*circ);
+  const handCol=bat.hand==="LHB"?"#4a7fa8":bat.hand==="RHB"?"#c8922a":"#5cb870";
+  const lineupCol=bat.lineupSpot&&parseInt(bat.lineupSpot)<=3?"#5cb870":bat.lineupSpot&&parseInt(bat.lineupSpot)<=5?"#c8922a":"#7a6848";
+
+  const hdr=el("div","grade-hdr");
   hdr.innerHTML=`
-    <div class="score-ring">
-      <svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="24" fill="none" stroke="#111e30" stroke-width="5"/>
-      <circle cx="28" cy="28" r="24" fill="none" stroke="${t.color}" stroke-width="5"
-        stroke-dasharray="${dash} ${Math.round(circ)}" stroke-linecap="round" transform="rotate(-90 28 28)"/></svg>
-      <div class="score-ring-inner">
-        <span class="score-num" style="color:${t.color}">${g.total}</span>
-        <span class="score-denom" style="color:${t.color}88">/${g.maxTotal}</span>
+    <div class="ring">
+      <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="4"/>
+      <circle cx="24" cy="24" r="22" fill="none" stroke="${tc.color}" stroke-width="4"
+        stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 24 24)"/></svg>
+      <div class="ring-inner">
+        <span class="ring-num" style="color:${tc.color}">${g.total}</span>
+        <span class="ring-den" style="color:${tc.color}">/${g.maxTotal}</span>
       </div>
     </div>
     <div style="flex:1;min-width:0;">
-      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
-        <span style="font-weight:800;font-size:16px;color:#f1f5f9;">${batter.name}</span>
-        ${batter.hand?`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${handColor}20;color:${handColor}">${batter.hand}</span>`:""}
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
+        <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:17px;color:var(--text)">${bat.name}</span>
+        ${bat.hand?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${handCol}20;color:${handCol}">${bat.hand}</span>`:""}
+        ${bat.lineupSpot?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${lineupCol}20;color:${lineupCol}">Spot ${bat.lineupSpot}</span>`:""}
       </div>
-      <div style="font-size:11px;color:#4a6080;margin-top:3px;">vs ${batter.pitcherName||"?"} ${batter.pitcherHand?`(${batter.pitcherHand})`:""} · ${batter.park?batter.park.split("(")[0].trim():"—"}</div>
-      ${batter.result&&batter.result!=="Pending"?`<div style="font-size:11px;margin-top:4px;font-weight:600;color:${batter.result.includes("Hit")?"#22c55e":"#ef4444"}">${batter.result}</div>`:""}
+      <div style="font-size:11px;color:var(--muted);line-height:1.5">
+        vs ${bat.pitcherName||"?"} ${bat.pitcherHand?"("+bat.pitcherHand+")":""}
+        ${bat.park?" · "+bat.park.split("(")[0].trim():""}
+      </div>
+      ${bat.result&&bat.result!=="Pending"?`<div style="font-size:11px;font-weight:700;margin-top:3px;color:${bat.result.includes("Hit")?"var(--green2)":"var(--red2)"}">${bat.result}</div>`:""}
+      <div class="qs-strip">
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.avgEV)>=91?'var(--green2)':parseFloat(bat.avgEV)>=88?'var(--amber)':'var(--red2)'}">${bat.avgEV||"—"}</div><div class="qs-lbl">EV</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.barrelPct)>=12?'var(--green2)':parseFloat(bat.barrelPct)>=7?'var(--amber)':'var(--muted)'}">${bat.barrelPct!=null?bat.barrelPct+'%':"—"}</div><div class="qs-lbl">Barrel</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.fbPct)>=38?'var(--green2)':parseFloat(bat.fbPct)>=28?'var(--amber)':'var(--red2)'}">${bat.fbPct!=null?bat.fbPct+'%':"—"}</div><div class="qs-lbl">FB%</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.gbPct)<=32?'var(--green2)':parseFloat(bat.gbPct)<=44?'var(--amber)':'var(--red2)'}">${bat.gbPct!=null?bat.gbPct+'%':"—"}</div><div class="qs-lbl">GB%</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.pullPct)>=38?'var(--green2)':parseFloat(bat.pullPct)>=28?'var(--amber)':'var(--muted)'}">${bat.pullPct!=null?bat.pullPct+'%':"—"}</div><div class="qs-lbl">Pull</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.hrVsPitcher)>=2?'var(--green2)':parseFloat(bat.hrVsPitcher)>=1?'var(--amber)':'var(--muted)'}">${bat.hrVsPitcher!=null?bat.hrVsPitcher:'—'}</div><div class="qs-lbl">HR vs P</div></div>
+      </div>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
-      <span style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:7px;padding:3px 11px;font-size:11px;font-weight:800;letter-spacing:0.07em;">${t.icon} ${g.tier.toUpperCase()}</span>
-      <span style="font-size:10px;color:#1e2d45;" class="toggle-hint">▼</span>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+      <span class="verdict" style="background:${tc.color}22;color:${tc.color};border:1px solid ${tc.color}55;">${g.tier}</span>
+      <span style="font-size:18px;color:var(--muted);line-height:1" class="toggle-ch">▾</span>
     </div>`;
 
-  // Body (hidden by default)
-  const body=el("div","grade-card-body");
-  body.style.display="none";
+  const body=el("div","grade-body");body.style.display="none";
 
   // Score bars
-  Object.entries(WEIGHTS).forEach(([k,w])=>{
-    const bd=g.breakdown[k];if(!bd)return;
-    const barPct=w.max>0?Math.round(bd.score/w.max*100):0;
+  Object.entries(W).forEach(([k,w])=>{
+    const b=g.B[k];if(!b)return;
+    const pB=w.max>0?Math.round(b.s/w.max*100):0;
     const row=el("div","bar-row");
-    row.innerHTML=`<div class="bar-meta"><span class="bar-label">${w.label}</span><div class="bar-right"><span class="bar-sub">${bd.label}</span><span class="bar-score" style="color:${w.color}">${bd.score}/${w.max}</span></div></div><div class="bar-track"><div class="bar-fill" style="width:${barPct}%;background:${w.color}"></div></div>`;
+    row.innerHTML=`<div class="bar-meta"><span class="bar-lbl">${w.label}</span><div class="bar-right"><span class="bar-note">${b.l||""}</span><span class="bar-pts" style="color:${w.color}">${b.s}/${w.max}</span></div></div><div class="bar-track"><div class="bar-fill" style="width:${pB}%;background:${w.color}88"></div></div>`;
     body.appendChild(row);
   });
 
-  // Platoon note
-  if(g.breakdown.platoon){
-    const note=el("div","",`<span style="font-weight:700;color:#e879f9;">Platoon: </span>${g.breakdown.platoon.label} · ${batter.hand||"?"} vs ${batter.pitcherHand||"?"}`,{background:"#0b1120",borderRadius:"9px",padding:"9px 12px",marginTop:"4px",marginBottom:"12px",fontSize:"11px",color:"#4a6080",lineHeight:"1.6"});
-    body.appendChild(note);
+  // Platoon callout
+  if(g.B.platoon&&bat.pitcherHand){
+    const pn=mk("div",{background:"rgba(192,130,160,.08)",border:"1px solid rgba(192,130,160,.2)",borderRadius:"8px",padding:"8px 11px",marginTop:"8px",marginBottom:"4px",fontSize:"11px",color:"#c084a0",lineHeight:"1.6"});
+    pn.textContent=`⚔️ Platoon: ${g.B.platoon.l} · ${bat.hand||"?"} vs ${bat.pitcherHand}`;
+    body.appendChild(pn);
   }
 
-  // Result row
+  // Result + actions
   const rr=el("div","result-row");
   ["Hit HR ✅","No HR ❌","Pending"].forEach(r=>{
-    const rb=el("button","result-btn",r);
-    if(batter.result===r){rb.style.cssText+=`;border-color:${t.color};background:${t.color}22;color:${t.color};font-weight:700;`;}
-    rb.onclick=e=>{e.stopPropagation();batter.result=r;save();render();};
+    const rb=el("button","res-btn",r);
+    if(bat.result===r)rb.className+= r.includes("Hit")?" active-hit":" active-miss";
+    rb.onclick=e=>{e.stopPropagation();bat.result=r;save();render();};
     rr.appendChild(rb);
   });
-  const editBtn=el("button","btn-sm","✏️ Edit");editBtn.style.marginLeft="auto";
-  editBtn.onclick=e=>{e.stopPropagation();batterForm={...batter};state.batters=state.batters.filter(b=>b.id!==batter.id);save();state.tab="add";render();};
-  rr.appendChild(editBtn);
-  const del=el("button","btn-sm","🗑");del.style.marginLeft="6px";
-  del.onclick=e=>{e.stopPropagation();if(confirm("Remove this pick?")){state.batters=state.batters.filter(b=>b.id!==batter.id);save();render();}};
-  rr.appendChild(del);
   body.appendChild(rr);
+
+  const ar=el("div","action-row");
+  // Share to Discord
+  const shareBtn=el("button","btn-sm","📢 Share");
+  shareBtn.onclick=e=>{
+    e.stopPropagation();
+    const pit=S.pitchers.find(p=>String(p.id)===String(bat.pitcherId));
+    postDiscord(bat,pit,bat.grade);
+  };
+  // Duplicate
+  const dupBtn=el("button","btn-sm","⧉ Dupe");
+  dupBtn.title="Duplicate this entry with same pitcher/park";
+  dupBtn.onclick=e=>{
+    e.stopPropagation();
+    BF={...bat,id:undefined,name:"",result:"Pending"};
+    S.tab="add";render();
+  };
+  // Edit
+  const editBtn=el("button","btn-sm","✏️ Edit");
+  editBtn.onclick=e=>{
+    e.stopPropagation();
+    BF={...bat};
+    S.batters=S.batters.filter(b=>b.id!==bat.id);
+    save();S.tab="add";render();
+  };
+  // Delete
+  const delBtn=el("button","btn-sm","🗑");
+  delBtn.onclick=e=>{
+    e.stopPropagation();
+    if(confirm(`Remove ${bat.name}?`)){S.batters=S.batters.filter(b=>b.id!==bat.id);save();render();}
+  };
+  ar.appendChild(shareBtn);ar.appendChild(dupBtn);ar.appendChild(editBtn);ar.appendChild(delBtn);
+  body.appendChild(ar);
 
   card.appendChild(hdr);card.appendChild(body);
   hdr.onclick=()=>{
     const open=body.style.display!=="none";
     body.style.display=open?"none":"block";
-    hdr.querySelector(".toggle-hint").textContent=open?"▼":"▲";
+    hdr.querySelector(".toggle-ch").textContent=open?"▾":"▴";
   };
   return card;
 }
 
-// ── ADD BATTER ─────────────────────────────────────────────────────────────────
-let batterForm={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10)};
-
-function renderAddBatter(c){
-  if(state.pitchers.length===0){
-    const d=el("div","empty");d.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">Add pitchers first</div>`;
-    const btn=el("button","btn-sm","Go to Pitchers →");btn.style.cssText="margin-top:12px;padding:10px 20px;color:#38bdf8;";btn.onclick=()=>{state.tab="pitchers";render();};
-    d.appendChild(btn);c.appendChild(d);return;
+// ── ADD BATTER ─────────────────────────────────────────────────────────────
+function rAdd(c){
+  if(S.pitchers.length===0){
+    const e=el("div","empty");
+    e.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">Add pitchers first</div><div class="empty-sub">You need at least one pitcher to grade a batter</div>`;
+    const btn=el("button","btn-outline","⚾ Go Add Pitchers");btn.style.marginTop="16px";
+    btn.onclick=()=>{S.tab="pitchers";render();};
+    e.appendChild(btn);c.appendChild(e);return;
   }
 
-  const f=batterForm;
+  const f=BF;
   const card=el("div","card");
 
-  // Header
-  card.appendChild(secHead("🧢","Batter Info"));
-
-  // Name
-  const nameInp=inp("text",f.name,"Aaron Judge");
-  card.appendChild(grid2(field("Player Name",nameInp,"2")));
-  nameInp.oninput=e=>f.name=e.target.value;
+  // ── Identity ──
+  card.appendChild(sec("🧢","Batter Info"));
+  const nameI=inp("text",f.name,"e.g. Aaron Judge");
+  nameI.oninput=e=>f.name=e.target.value;
 
   // Hand toggle
-  const handSec=el("div");handSec.style.marginBottom="11px";
-  const hl=el("label","field","Batter Side");
+  const hWrap=el("div");
+  const hLbl=mk("label",null,"Batter Side");hLbl.className="field-label";
   const ht=el("div","hand-toggle");
   ["RHB","LHB","Switch"].forEach(h=>{
-    const b=el("button","hand-btn"+(f.hand===h?` active-${h.toLowerCase().replace("hb","hb").replace("switch","sw")}`:""),h);
-    b.onclick=()=>{f.hand=h;renderAddBatter(c);};
+    const b=el("button","hand-btn"+(f.hand===h?` active-${h==="Switch"?"sw":h.toLowerCase()}`:""),h);
+    b.onclick=()=>{f.hand=h;save();rAdd(document.getElementById("content"));};
     ht.appendChild(b);
   });
-  handSec.appendChild(hl);handSec.appendChild(ht);card.appendChild(handSec);
+  hWrap.appendChild(hLbl);hWrap.appendChild(ht);
+  card.appendChild(g2(fld("Player Name",nameI,2)));
+  card.appendChild(hWrap);
 
-  // Pitcher select
-  const pSel=sel(state.pitchers.map(p=>({v:String(p.id),l:`${p.name} (${p.team}) — ${p.hand}`})),String(f.pitcherId||""),"Select pitcher…");
-  pSel.onchange=e=>{f.pitcherId=e.target.value;
-    // Show platoon indicator
-    const pBox=document.getElementById("platoon-box");
-    if(pBox){
-      const pit=state.pitchers.find(p=>String(p.id)===e.target.value);
-      if(pit&&f.hand) updatePlatoonBox(pBox,f.hand,pit);
-      else pBox.style.display="none";
-    }
-  };
-  card.appendChild(grid2(field("Facing Pitcher",pSel,"2")));
+  // Pitcher
+  const pSel=mkSel(S.pitchers.map(p=>({v:String(p.id),l:`${p.name} (${p.team}) — ${p.hand}`})),String(f.pitcherId||""),"Select today's pitcher…");
+  pSel.onchange=e=>{f.pitcherId=e.target.value;updatePlatoon();};
+  card.appendChild(g2(fld("Facing Pitcher",pSel,2)));
 
-  // Platoon indicator
-  const pBox=el("div","platoon-box");pBox.id="platoon-box";pBox.style.display="none";
-  card.appendChild(pBox);
-  if(f.pitcherId&&f.hand){
-    const pit=state.pitchers.find(p=>String(p.id)===String(f.pitcherId));
-    if(pit){pBox.style.display="block";updatePlatoonBox(pBox,f.hand,pit);}
+  // Platoon box
+  const pBox=el("div","platoon-box");card.appendChild(pBox);
+  function updatePlatoon(){
+    const pit=S.pitchers.find(p=>String(p.id)===String(f.pitcherId));
+    if(!pit||!f.hand){pBox.style.display="none";return;}
+    const pH=pit.hand,pW=pit.platoonWeakness||"";
+    const edge=(f.hand==="LHB"&&pH==="RHP")||(f.hand==="RHB"&&pH==="LHP");
+    const same=(f.hand==="LHB"&&pH==="LHP")||(f.hand==="RHB"&&pH==="RHP");
+    const weak=pW.includes(f.hand==="LHB"?"LHB":"RHB")||pW==="Weak vs Both";
+    const col=weak||edge?"#5cb870":same?"#c0392b":"#c8922a";
+    const msg=weak?`⚔️ ${pit.name} documented WEAK vs ${f.hand}`:edge?`✅ Classic platoon edge — ${f.hand} vs ${pH}`:same?`⚠️ Same-side — slight disadvantage`:`➡️ Neutral`;
+    pBox.style.cssText=`background:${col}12;border:1px solid ${col}33;border-radius:9px;padding:8px 11px;font-size:12px;color:${col};font-weight:600;margin-bottom:10px;display:block;`;
+    pBox.textContent=msg;
   }
+  if(f.pitcherId&&f.hand)updatePlatoon();
 
   // Park + Date + Lineup
-  const parkSel=sel(PARKS.map(p=>p.name),f.park,"Select park…");parkSel.onchange=e=>f.park=e.target.value;
-  const dateInp=inp("date",f.date);dateInp.onchange=e=>f.date=e.target.value;
-  const luSel=sel([""].concat(LINEUP_SPOTS),f.lineupSpot,"—");luSel.onchange=e=>f.lineupSpot=e.target.value;
-  card.appendChild(grid2(field("Park",parkSel,"2"),field("Date",dateInp),field("Lineup Spot",luSel)));
+  const pkSel=mkSel(PARKS.map(p=>p.n),f.park,"Select park…");pkSel.onchange=e=>f.park=e.target.value;
+  const dateI=inp("date",f.date);dateI.onchange=e=>f.date=e.target.value;
+  const luSel=mkSel(["1","2","3","4","5","6","7","8","9"],f.lineupSpot,"—");luSel.onchange=e=>f.lineupSpot=e.target.value;
+  card.appendChild(g3(fld("Park",pkSel,2),fld("Lineup Spot",luSel)));
+  card.appendChild(g2(fld("Date",dateI)));
 
-  // Power
-  card.appendChild(secHead("⚡","Power Metrics","vs pitcher's arsenal"));
-  const evI=inp("number",f.avgEV,"94.5");evI.oninput=e=>f.avgEV=e.target.value;
-  const barI=inp("number",f.barrelPct,"18.0");barI.oninput=e=>f.barrelPct=e.target.value;
-  const hrfbI=inp("number",f.hrFbPct,"22.0");hrfbI.oninput=e=>f.hrFbPct=e.target.value;
-  const hhI=inp("number",f.hardHitPct,"48.0");hhI.oninput=e=>f.hardHitPct=e.target.value;
-  const isoI=inp("number",f.iso,"0.280");isoI.oninput=e=>f.iso=e.target.value;
-  card.appendChild(grid2(field("Avg Exit Velo (mph)",evI),field("Barrel %",barI),field("HR/FB %",hrfbI),field("Hard Hit %",hhI),field("ISO vs Arsenal",isoI)));
+  // ── Power Metrics ──
+  card.appendChild(sec("⚡","Power Metrics","All vs pitcher's pitch mix — last ~20 ABs"));
+  const evI=inp("number",f.avgEV,"93.5");evI.oninput=e=>f.avgEV=e.target.value;
+  const barI=inp("number",f.barrelPct,"14.0");barI.oninput=e=>f.barrelPct=e.target.value;
+  const hrfbI=inp("number",f.hrFbPct,"20.0");hrfbI.oninput=e=>f.hrFbPct=e.target.value;
+  const hhI=inp("number",f.hardHitPct,"46.0");hhI.oninput=e=>f.hardHitPct=e.target.value;
+  const isoI=inp("number",f.iso,"0.260");isoI.oninput=e=>f.iso=e.target.value;
+  card.appendChild(g2(
+    fld("Avg EV (mph)",evI),fld("Barrel %",barI),
+    fld("HR/FB %",hrfbI),fld("Hard Hit %",hhI),
+    fld("ISO vs Arsenal",isoI)
+  ));
 
-  // Batted ball
-  card.appendChild(secHead("🎯","Batted Ball Profile","Air Ratio = (FB%+LD%) ÷ GB%"));
-  const infoBox=el("div","info-box","<span style='color:#38bdf8;font-weight:600'>Air Ratio:</span> Elite ≥2.5 · Good ≥1.8 · Neutral ≥1.2 · GB-heavy &lt;1.0");
-  card.appendChild(infoBox);
-  const fbI=inp("number",f.fbPct,"42");fbI.oninput=e=>f.fbPct=e.target.value;
-  const gbI=inp("number",f.gbPct,"35");gbI.oninput=e=>f.gbPct=e.target.value;
-  const ldI=inp("number",f.ldPct,"23");ldI.oninput=e=>f.ldPct=e.target.value;
-  const pullI=inp("number",f.pullPct,"45");pullI.oninput=e=>f.pullPct=e.target.value;
-  card.appendChild(grid2(field("FB% (Fly Ball)",fbI),field("GB% (Ground Ball)",gbI),field("LD% (Line Drive)",ldI),field("Pull%",pullI)));
+  // ── Batted Ball ──
+  card.appendChild(sec("🎯","Batted Ball","FB%, GB%, LD%, Pull% — all vs pitch mix"));
+  const infoB=el("div","info-box","<strong style='color:var(--amber)'>Air Ratio</strong> = (FB%+LD%) ÷ GB% — higher = more fly balls = more HR chances. Elite ≥2.5 · Good ≥1.8 · Neutral ≥1.2");
+  card.appendChild(infoB);
+  const fbI=inp("number",f.fbPct,"40");fbI.oninput=e=>f.fbPct=e.target.value;
+  const gbI=inp("number",f.gbPct,"32");gbI.oninput=e=>f.gbPct=e.target.value;
+  const ldI=inp("number",f.ldPct,"22");ldI.oninput=e=>f.ldPct=e.target.value;
+  const pullI=inp("number",f.pullPct,"42");pullI.oninput=e=>f.pullPct=e.target.value;
+  card.appendChild(g2(fld("FB%",fbI),fld("GB%",gbI),fld("LD%",ldI),fld("Pull%",pullI)));
 
-  // BvP
-  card.appendChild(secHead("📋","BvP History"));
-  const bvpSel=sel(BVP_SOURCES,f.bvpSource);bvpSel.onchange=e=>f.bvpSource=e.target.value;
+  // ── BvP ──
+  card.appendChild(sec("📋","BvP History"));
+  const bvpSel=mkSel(BVP_SOURCES,f.bvpSource);bvpSel.onchange=e=>f.bvpSource=e.target.value;
   const abI=inp("number",f.abVsPitcher,"12");abI.oninput=e=>f.abVsPitcher=e.target.value;
   const hrBI=inp("number",f.hrVsPitcher,"2");hrBI.oninput=e=>f.hrVsPitcher=e.target.value;
-  const slgI=inp("number",f.slgVsPitcher,"0.583");slgI.oninput=e=>f.slgVsPitcher=e.target.value;
-  const avgI=inp("number",f.avgVsPitcher,"0.333");avgI.oninput=e=>f.avgVsPitcher=e.target.value;
-  card.appendChild(grid2(field("Source",bvpSel,"2"),field("AB vs Pitcher",abI),field("HR vs Pitcher",hrBI),field("SLG vs Pitcher",slgI),field("AVG vs Pitcher",avgI)));
+  const slgI=inp("number",f.slgVsPitcher,"0.580");slgI.oninput=e=>f.slgVsPitcher=e.target.value;
+  const avgI=inp("number",f.avgVsPitcher,"0.300");avgI.oninput=e=>f.avgVsPitcher=e.target.value;
+  card.appendChild(g2(
+    fld("Source",bvpSel,2),
+    fld("AB vs Pitcher",abI),fld("HR vs Pitcher",hrBI),
+    fld("SLG vs Pitcher",slgI),fld("AVG vs Pitcher",avgI)
+  ));
 
-  // Pitch boost
-  card.appendChild(secHead("🎰","Pitch Type Boost","Only if batter crushes a pitch thrown heavily"));
-  const ptSel=sel(PITCH_TYPES,f.pitchType);ptSel.onchange=e=>f.pitchType=e.target.value;
-  const puI=inp("number",f.pitchUsagePct,"55");puI.oninput=e=>f.pitchUsagePct=e.target.value;
-  const pbI=inp("number",f.batterBarrelVsPitch,"24");pbI.oninput=e=>f.batterBarrelVsPitch=e.target.value;
+  // ── Pitch Boost ──
+  card.appendChild(sec("🎰","Pitch Boost","Only if batter crushes a pitch the pitcher leans on heavily"));
+  const ptSel=mkSel(PITCH_TYPES,f.pitchType);ptSel.onchange=e=>f.pitchType=e.target.value;
+  const puI=inp("number",f.pitchUsagePct,"52");puI.oninput=e=>f.pitchUsagePct=e.target.value;
+  const pbI=inp("number",f.batterBarrelVsPitch,"22");pbI.oninput=e=>f.batterBarrelVsPitch=e.target.value;
   const phrI=inp("number",f.batterHrVsPitch,"3");phrI.oninput=e=>f.batterHrVsPitch=e.target.value;
-  card.appendChild(grid2(field("Pitcher Primary Pitch",ptSel,"2"),field("Pitch Usage %",puI),field("Barrel% vs Pitch",pbI),field("HR vs This Pitch",phrI)));
+  card.appendChild(g2(
+    fld("Primary Pitch",ptSel,2),
+    fld("Usage %",puI),fld("Barrel% vs Pitch",pbI),fld("HR vs Pitch",phrI)
+  ));
 
-  // Weather
-  card.appendChild(secHead("🌤","Weather"));
-  const wsI=inp("number",f.windSpeed,"12");wsI.oninput=e=>f.windSpeed=e.target.value;
-  const wdSel=sel(WIND_DIRS,f.windDir);wdSel.onchange=e=>f.windDir=e.target.value;
-  const tempI=inp("number",f.temp,"78");tempI.oninput=e=>f.temp=e.target.value;
+  // ── Weather ──
+  card.appendChild(sec("🌤","Weather"));
+  const wsI=inp("number",f.windSpeed,"10");wsI.oninput=e=>f.windSpeed=e.target.value;
+  const wdSel=mkSel(WIND_DIRS,f.windDir);wdSel.onchange=e=>f.windDir=e.target.value;
+  const tempI=inp("number",f.temp,"75");tempI.oninput=e=>f.temp=e.target.value;
   const humI=inp("number",f.humidity,"55");humI.oninput=e=>f.humidity=e.target.value;
-  card.appendChild(grid2(field("Wind Speed (mph)",wsI),field("Wind Direction",wdSel,"1"),field("Temp (°F)",tempI),field("Humidity %",humI)));
+  card.appendChild(g2(fld("Wind (mph)",wsI),fld("Direction",wdSel,1),fld("Temp (°F)",tempI),fld("Humidity %",humI)));
 
   // Submit
-  const submitBtn=el("button","btn-primary","⚡ GRADE THIS MATCHUP");
-  submitBtn.style.marginTop="22px";
-  submitBtn.onclick=()=>{
-    if(!f.name)return alert("Enter player name.");
+  const sub=el("button","btn-primary","⚡ GRADE THIS MATCHUP");
+  sub.style.marginTop="22px";
+  sub.onclick=()=>{
+    if(!f.name||!f.name.trim())return alert("Enter player name.");
     if(!f.pitcherId)return alert("Select a pitcher.");
-    const pitcher=state.pitchers.find(p=>String(p.id)===String(f.pitcherId));
-    const grade=calcScore(f,pitcher);
-    const batter={...f,id:Date.now(),grade,pitcherName:pitcher?.name||"",pitcherHand:pitcher?.hand||""};
-    state.batters.unshift(batter);
-    save();
-    postToDiscord(batter,pitcher,grade);
-    batterForm={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:f.date,pitcherId:f.pitcherId};
-    state.tab="board";render();
+    const pit=S.pitchers.find(p=>String(p.id)===String(f.pitcherId));
+    const gr=score(f,pit);
+    const bat={...f,id:Date.now(),grade:gr,pitcherName:pit?.name||"",pitcherHand:pit?.hand||"",result:"Pending"};
+    S.batters.unshift(bat);save();
+    // Reset form but keep pitcher + park for quick multi-entry
+    BF={hand:f.hand,bvpSource:"Direct BvP (vs this pitcher)",windDir:f.windDir,pitchType:"None / Skip",
+        date:f.date,pitcherId:f.pitcherId,park:f.park,windSpeed:f.windSpeed,temp:f.temp,windDir:f.windDir};
+    S.tab="board";render();
+    toast(`✅ ${bat.name} graded — ${gr.tier}`);
   };
-  card.appendChild(submitBtn);
+  card.appendChild(sub);
   c.appendChild(card);
 }
 
-function updatePlatoonBox(box,hand,pitcher){
-  const pH=pitcher.hand,pW=pitcher.platoonWeakness||"";
-  const edge=(hand==="LHB"&&pH==="RHP")||(hand==="RHB"&&pH==="LHP");
-  const same=(hand==="LHB"&&pH==="LHP")||(hand==="RHB"&&pH==="RHP");
-  const weak=pW.includes(hand)||pW==="Weak vs Both";
-  const color=weak||edge?"#22c55e":same?"#ef4444":"#f59e0b";
-  const msg=weak?`⚔️ ${pitcher.name} documented WEAK vs ${hand}`:edge?`✅ Classic platoon edge — ${hand} vs ${pH}`:same?`⚠️ Same-side matchup — slight disadvantage`:`➡️ Neutral platoon`;
-  box.style.cssText=`background:${color}12;border:1px solid ${color}33;border-radius:9px;padding:8px 12px;font-size:12px;color:${color};font-weight:600;margin-bottom:11px;display:block;`;
-  box.textContent=msg;
-}
-
-// ── PITCHERS ─────────────────────────────────────────────────────────────────
-let pitcherForm={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
-
-function renderPitchers(c){
-  state.pitchers.forEach(p=>c.appendChild(makePitcherCard(p)));
-
-  if(state.showPitcherForm){
-    c.appendChild(makePitcherForm());
+// ── PITCHERS ──────────────────────────────────────────────────────────────
+function rPitchers(c){
+  S.pitchers.forEach(p=>c.appendChild(mkPitCard(p)));
+  if(S.pitcherForm){
+    c.appendChild(mkPitForm());
   }else{
     const btn=el("button","btn-outline","＋ Add Pitcher");
-    btn.onclick=()=>{state.showPitcherForm=true;render();};
+    btn.onclick=()=>{S.pitcherForm=true;render();};
     c.appendChild(btn);
   }
 }
 
-function makePitcherCard(p){
-  const isLHP=p.hand==="LHP";
-  const card=el("div","pitcher-card");
-  const badge=el("div","pitcher-hand-badge",p.hand,{background:isLHP?"rgba(56,189,248,0.12)":"rgba(245,158,11,0.12)",color:isLHP?"#38bdf8":"#f59e0b"});
-  const info=el("div","",`
-    <div style="font-weight:700;font-size:14px;color:#f1f5f9">${p.name} <span style="color:#2d4060;font-weight:400;font-size:12px">· ${p.team}</span></div>
-    <div style="font-size:11px;color:#2d4060;margin-top:3px;line-height:1.7">ERA ${p.era||"—"} · HR/9 ${p.hr9||"—"} · ISO ${p.isoAllowed||"—"} · Barrel% ${p.barrelAllowed||"—"}</div>
-    ${p.platoonWeakness&&p.platoonWeakness!=="None / Unknown"?`<div style="margin-top:5px;font-size:11px;font-weight:600;color:#e879f9">⚔️ ${p.platoonWeakness}</div>`:""}
-    ${p.vsLHBhr9||p.vsRHBhr9?`<div style="font-size:11px;color:#2d4060;margin-top:2px">${p.vsLHBhr9?`HR/9 vs LHB: ${p.vsLHBhr9}`:""}${p.vsLHBhr9&&p.vsRHBhr9?" · ":""}${p.vsRHBhr9?`HR/9 vs RHB: ${p.vsRHBhr9}`:""}</div>`:""}
-  `);
-  info.style.flex="1";
-  const btnWrap=el("div");btnWrap.style.cssText="display:flex;flex-direction:column;gap:5px;flex-shrink:0;";
-  const editP=el("button","btn-sm","✏️");
-  editP.onclick=()=>{pitcherForm={...p};state.pitchers=state.pitchers.filter(x=>x.id!==p.id);save();state.showPitcherForm=true;render();};
-  const delP=el("button","btn-sm","🗑");
-  delP.onclick=()=>{if(confirm("Remove pitcher?")){state.pitchers=state.pitchers.filter(x=>x.id!==p.id);save();render();}};
-  btnWrap.appendChild(editP);btnWrap.appendChild(delP);
-  card.appendChild(badge);card.appendChild(info);card.appendChild(btnWrap);
-  return card;
+function mkPitCard(p){
+  const isL=p.hand==="LHP";
+  const c=el("div","pit-card");
+  const badge=el("div","pit-badge",p.hand);
+  badge.style.background=isL?"rgba(74,127,168,.15)":"rgba(200,146,42,.15)";
+  badge.style.color=isL?"#4a7fa8":"#c8922a";
+  const info=mk("div",{flex:"1"});
+  info.innerHTML=`
+    <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--text)">${p.name} <span style="color:var(--muted);font-weight:500;font-size:12px">· ${p.team||"—"}</span></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.7">ERA ${p.era||"—"} · HR/9 ${p.hr9||"—"} · ISO Allow ${p.isoAllowed||"—"} · Barrel% ${p.barrelAllowed||"—"}%</div>
+    ${p.platoonWeakness&&p.platoonWeakness!=="None / Unknown"?`<div style="font-size:11px;font-weight:600;color:#c084a0;margin-top:4px">⚔️ ${p.platoonWeakness}</div>`:""}
+    ${p.vsLHBhr9||p.vsRHBhr9?`<div style="font-size:10px;color:var(--muted2);margin-top:2px">${p.vsLHBhr9?`HR/9 vs LHB: ${p.vsLHBhr9}`:""}${p.vsLHBhr9&&p.vsRHBhr9?" · ":""}${p.vsRHBhr9?`HR/9 vs RHB: ${p.vsRHBhr9}`:""}</div>`:""}`;
+  const acts=mk("div",{display:"flex",gap:"5px",flexShrink:"0"});
+  const ed=el("button","btn-icon","✏️");
+  ed.onclick=()=>{PF={...p};S.pitchers=S.pitchers.filter(x=>x.id!==p.id);save();S.pitcherForm=true;render();};
+  const dl=el("button","btn-icon","🗑");
+  dl.onclick=()=>{if(confirm(`Remove ${p.name}?`)){S.pitchers=S.pitchers.filter(x=>x.id!==p.id);save();render();}};
+  acts.appendChild(ed);acts.appendChild(dl);
+  c.appendChild(badge);c.appendChild(info);c.appendChild(acts);
+  return c;
 }
 
-function makePitcherForm(){
-  const f=pitcherForm;
+function mkPitForm(){
+  const f=PF;
   const card=el("div","card");
-  card.appendChild(secHead("⚾","Pitcher Details","Stats allowed — used in matchup scoring"));
+  card.appendChild(sec("⚾","Pitcher Details","Stats allowed this season"));
 
-  const nameI=inp("text",f.name,"Spencer Strider");nameI.oninput=e=>f.name=e.target.value;
+  const nameI=inp("text",f.name,"e.g. Spencer Strider");nameI.oninput=e=>f.name=e.target.value;
   const teamI=inp("text",f.team,"ATL");teamI.oninput=e=>f.team=e.target.value;
-  const handSel=sel(["RHP","LHP"],f.hand);handSel.onchange=e=>f.hand=e.target.value;
-  const eraI=inp("number",f.era,"3.45");eraI.oninput=e=>f.era=e.target.value;
-  const hr9I=inp("number",f.hr9,"1.2");hr9I.oninput=e=>f.hr9=e.target.value;
-  const isoI=inp("number",f.isoAllowed,"0.190");isoI.oninput=e=>f.isoAllowed=e.target.value;
+  const handSel=mkSel(["RHP","LHP"],f.hand);handSel.onchange=e=>f.hand=e.target.value;
+  const eraI=inp("number",f.era,"3.50");eraI.oninput=e=>f.era=e.target.value;
+  const hr9I=inp("number",f.hr9,"1.20");hr9I.oninput=e=>f.hr9=e.target.value;
+  const isoI=inp("number",f.isoAllowed,"0.185");isoI.oninput=e=>f.isoAllowed=e.target.value;
   const barI=inp("number",f.barrelAllowed,"9.0");barI.oninput=e=>f.barrelAllowed=e.target.value;
-  const fbI=inp("number",f.fbPctAllowed,"38");fbI.oninput=e=>f.fbPctAllowed=e.target.value;
-  const ptSel=sel(PITCH_TYPES,f.primaryPitch);ptSel.onchange=e=>f.primaryPitch=e.target.value;
-  card.appendChild(grid2(field("Name",nameI,"2"),field("Team",teamI),field("Throws",handSel),field("ERA",eraI),field("HR/9",hr9I),field("ISO Allowed",isoI),field("Barrel% Allowed",barI),field("FB% Allowed",fbI),field("Primary Pitch",ptSel)));
+  const fbAI=inp("number",f.fbPctAllowed,"38");fbAI.oninput=e=>f.fbPctAllowed=e.target.value;
+  card.appendChild(g2(
+    fld("Name",nameI,2),
+    fld("Team",teamI),fld("Throws",handSel),
+    fld("ERA",eraI),fld("HR/9",hr9I),
+    fld("ISO Allowed",isoI),fld("Barrel% Allowed",barI),
+    fld("FB% Allowed",fbAI)
+  ));
 
-  card.appendChild(secHead("⚔️","Platoon Weakness","Pitcher's documented splits"));
-  const pwSel=sel(PLATOON_WEAKNESS,f.platoonWeakness);pwSel.onchange=e=>f.platoonWeakness=e.target.value;
+  card.appendChild(sec("⚔️","Platoon Splits","Pitcher's documented weakness vs handedness"));
+  const pwSel=mkSel(PLATOON_WEAKNESS,f.platoonWeakness);pwSel.onchange=e=>f.platoonWeakness=e.target.value;
   const lhbI=inp("number",f.vsLHBhr9,"1.4");lhbI.oninput=e=>f.vsLHBhr9=e.target.value;
   const rhbI=inp("number",f.vsRHBhr9,"0.9");rhbI.oninput=e=>f.vsRHBhr9=e.target.value;
-  card.appendChild(grid2(field("Weak vs Side",pwSel,"2"),field("HR/9 vs LHB",lhbI),field("HR/9 vs RHB",rhbI)));
+  card.appendChild(g2(fld("Weak vs",pwSel,2),fld("HR/9 vs LHB",lhbI),fld("HR/9 vs RHB",rhbI)));
 
-  const saveBtn=el("button","btn-secondary","＋ Save Pitcher");saveBtn.style.marginTop="16px";
+  const saveBtn=el("button","btn-secondary","＋ Save Pitcher");saveBtn.style.marginTop="14px";
   saveBtn.onclick=()=>{
-    if(!f.name)return alert("Enter pitcher name.");
-    state.pitchers.push({...f,id:Date.now()});
-    pitcherForm={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
-    state.showPitcherForm=false;save();render();
+    if(!f.name||!f.name.trim())return alert("Enter pitcher name.");
+    S.pitchers.push({...f,id:f.id||Date.now()});
+    PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
+    S.pitcherForm=false;save();render();
   };
-  card.appendChild(saveBtn);
+  const cancelBtn=el("button","btn-sm","Cancel");cancelBtn.style.cssText="margin-top:8px;width:100%;padding:10px;";
+  cancelBtn.onclick=()=>{S.pitcherForm=false;render();};
+  card.appendChild(saveBtn);card.appendChild(cancelBtn);
   return card;
 }
 
-// ── BACKUP / RESTORE ─────────────────────────────────────────────────────────
+// ── SETTINGS / WEIGHTS ────────────────────────────────────────────────────
+function rWeights(c){
+  // Backup / Restore
+  const bk=el("div","card");
+  bk.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:4px">💾 Backup & Restore</div><div style="font-size:11px;color:var(--muted);margin-bottom:14px">Save all picks, pitchers and weights. Restore on any device.</div>`;
+  const expBtn=el("button","btn-secondary","⬇️ Export Backup");expBtn.onclick=exportData;bk.appendChild(expBtn);
+  const impWrap=mk("div",{marginTop:"10px"});
+  const impLbl=el("label","btn-secondary","⬆️ Restore Backup");
+  impLbl.style.cssText="display:block;cursor:pointer;text-align:center;padding:11px 0;border-radius:10px;";
+  const impInp=document.createElement("input");impInp.type="file";impInp.accept=".json";impInp.style.display="none";
+  impInp.onchange=e=>{if(e.target.files[0])importData(e.target.files[0]);};
+  impLbl.appendChild(impInp);impWrap.appendChild(impLbl);bk.appendChild(impWrap);
+  c.appendChild(bk);
+
+  // Clear slate
+  const clrCard=el("div","card");
+  clrCard.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:4px">🗑 Clear Daily Slate</div><div style="font-size:11px;color:var(--muted);margin-bottom:12px">Remove all today's batter picks. Pitchers and weights are kept.</div>`;
+  const clrBtn=el("button","btn-sm","Clear All Picks");
+  clrBtn.style.cssText="width:100%;padding:11px;color:var(--red2);border-color:rgba(192,57,43,.4);";
+  clrBtn.onclick=()=>{if(confirm("Clear all picks? This cannot be undone.")){S.batters=[];save();render();toast("Slate cleared");}};
+  clrCard.appendChild(clrBtn);c.appendChild(clrCard);
+
+  // Weights
+  const wCard=el("div","card");
+  const maxTotal=Object.values(W).reduce((a,w)=>a+w.max,0);
+  const fire=Math.round(maxTotal*.70),lean=Math.round(maxTotal*.52);
+  wCard.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text)">Scoring Weights</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Drag slider to adjust each factor's max points</div></div><div style="text-align:right"><div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green2);font-weight:700">${maxTotal} pts max</div><div style="font-size:10px;color:var(--muted);margin-top:2px">🔥 ≥${fire} · ✅ ≥${lean}</div></div></div>`;
+
+  Object.entries(W).forEach(([k,w])=>{
+    const row=el("div","weight-row");
+    const dot=mk("div",{width:"9px",height:"9px",borderRadius:"50%",flexShrink:"0",background:w.color});
+    const lbl=el("div","weight-lbl",w.label);
+    const sl=document.createElement("input");sl.type="range";sl.min=0;sl.max=30;sl.value=w.max;sl.style.accentColor=w.color;
+    const val=el("div","weight-val",String(w.max));val.style.color=w.color;
+    sl.oninput=e=>{W[k].max=parseInt(e.target.value);val.textContent=e.target.value;save();};
+    row.appendChild(dot);row.appendChild(lbl);row.appendChild(sl);row.appendChild(val);
+    wCard.appendChild(row);
+  });
+
+  const rst=el("button","btn-sm","↺ Reset to Defaults");
+  rst.style.cssText="width:100%;padding:10px;margin-top:10px;";
+  rst.onclick=()=>{W=JSON.parse(JSON.stringify(W_DEFAULT));save();render();};
+  wCard.appendChild(rst);c.appendChild(wCard);
+}
+
+// ── BACKUP / RESTORE ──────────────────────────────────────────────────────
 function exportData(){
-  const data={batters:state.batters,pitchers:state.pitchers,weights:WEIGHTS};
-  const json=JSON.stringify(data,null,2);
-  const blob=new Blob([json],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
+  const d={batters:S.batters,pitchers:S.pitchers,weights:W,exported:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});
   const a=document.createElement("a");
-  a.href=url;a.download="hr-grader-backup-"+new Date().toISOString().slice(0,10)+".json";
-  a.click();URL.revokeObjectURL(url);
-  showToast("✅ Backup saved!");
+  a.href=URL.createObjectURL(blob);
+  a.download=`hr-grader-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(a.href);
+  toast("✅ Backup saved!");
 }
 
 function importData(file){
-  const reader=new FileReader();
-  reader.onload=e=>{
+  const r=new FileReader();
+  r.onload=e=>{
     try{
-      const data=JSON.parse(e.target.result);
-      if(data.batters) state.batters=data.batters;
-      if(data.pitchers) state.pitchers=data.pitchers;
-      if(data.weights) WEIGHTS=data.weights;
-      save();render();
-      showToast("✅ Data restored!");
-    }catch(err){showToast("⚠️ Invalid backup file");}
+      const d=JSON.parse(e.target.result);
+      if(d.batters)S.batters=d.batters;
+      if(d.pitchers)S.pitchers=d.pitchers;
+      if(d.weights)W=d.weights;
+      save();render();toast("✅ Data restored!");
+    }catch(err){toast("⚠️ Invalid backup file");}
   };
-  reader.readAsText(file);
+  r.readAsText(file);
 }
 
-// ── WEIGHTS ───────────────────────────────────────────────────────────────────
-function renderWeights(c){
-  // Backup/Restore card
-  const backupCard=el("div","card");backupCard.style.marginBottom="12px";
-  backupCard.innerHTML=`<div style="font-weight:800;font-size:15px;color:#f1f5f9;margin-bottom:4px">💾 Backup & Restore</div><div style="font-size:11px;color:#2d4060;margin-bottom:14px">Save your picks, pitchers and weights to a file. Restore anytime.</div>`;
-  const expBtn=el("button","btn-secondary","⬇️ Export Backup");
-  expBtn.onclick=exportData;
-  backupCard.appendChild(expBtn);
-  const impWrap=el("div");impWrap.style.marginTop="10px";
-  const impLbl=el("label","","⬆️ Restore from Backup");
-  impLbl.style.cssText="display:block;width:100%;padding:12px 0;border-radius:10px;background:#0f2040;border:1px solid #38bdf8;color:#38bdf8;font-weight:700;font-size:13px;cursor:pointer;text-align:center;";
-  const impInp=document.createElement("input");impInp.type="file";impInp.accept=".json";impInp.style.display="none";
-  impInp.onchange=e=>{if(e.target.files[0])importData(e.target.files[0]);};
-  impLbl.appendChild(impInp);impWrap.appendChild(impLbl);backupCard.appendChild(impWrap);
-  c.appendChild(backupCard);
-
-  const card=el("div","card");
-  const total=Object.values(WEIGHTS).reduce((s,w)=>s+w.max,0);
-  const ideal=Math.round(total*.70),fav=Math.round(total*.55),avg=Math.round(total*.40);
-  const hdr=el("div","",`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-weight:800;font-size:15px;color:#f1f5f9">Scoring Weights</div><div style="font-size:11px;color:#2d4060;margin-top:3px">Adjust max points per factor</div></div><div style="text-align:right"><div style="font-size:13px;color:#38bdf8;font-weight:700;font-family:'JetBrains Mono',monospace">${total} pts max</div><div style="font-size:10px;color:#2d4060;margin-top:2px">Ideal ≥${ideal} · Fav ≥${fav} · Avg ≥${avg}</div></div></div>`);
-  card.appendChild(hdr);
-
-  Object.entries(WEIGHTS).forEach(([k,w])=>{
-    const row=el("div","weight-row");
-    const dot=el("div","weight-dot","",{background:w.color});
-    const lbl=el("div","weight-label",w.label);
-    const slider=document.createElement("input");slider.type="range";slider.min=0;slider.max=30;slider.value=w.max;slider.style.accentColor=w.color;
-    const val=el("div","weight-val",String(w.max),{color:w.color});
-    slider.oninput=e=>{WEIGHTS[k].max=parseInt(e.target.value);val.textContent=e.target.value;save();};
-    row.appendChild(dot);row.appendChild(lbl);row.appendChild(slider);row.appendChild(val);
-    card.appendChild(row);
-  });
-
-  const resetBtn=el("button","",`↺ Reset to Defaults`,{width:"100%",padding:"9px 0",borderRadius:"8px",background:"#0b1120",border:"1px solid #1e2d45",color:"#4a6080",fontSize:"12px",cursor:"pointer",marginTop:"8px"});
-  resetBtn.onclick=()=>{WEIGHTS=JSON.parse(JSON.stringify(DEFAULT_WEIGHTS));save();render();};
-  card.appendChild(resetBtn);
-  c.appendChild(card);
-}
-
-// ── BOOT ─────────────────────────────────────────────────────────────────────
+// ── BOOT ──────────────────────────────────────────────────────────────────
 load();render();
 </script>
 
