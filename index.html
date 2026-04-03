@@ -540,7 +540,7 @@ function rHeader(){
 
   // Tabs
   const tabs=document.getElementById("tabs");tabs.innerHTML="";
-  [{id:"board",icon:"📊",l:"Board"},{id:"add",icon:"＋",l:"Add"},{id:"pitchers",icon:"⚾",l:"Pitchers"},{id:"weights",icon:"⚙",l:"Settings"}].forEach(t=>{
+  [{id:"board",icon:"📊",l:"Board"},{id:"add",icon:"＋",l:"Add"},{id:"pitchers",icon:"⚾",l:"Pitchers"},{id:"track",icon:"📈",l:"Track"},{id:"weights",icon:"⚙",l:"Settings"}].forEach(t=>{
     const b=el("button","tab-btn"+(S.tab===t.id?" active":""),`<span style="font-size:13px">${t.icon}</span>${t.l}`);
     b.onclick=()=>{S.tab=t.id;render();};
     tabs.appendChild(b);
@@ -552,7 +552,124 @@ function rContent(){
   if(S.tab==="board")rBoard(c);
   else if(S.tab==="add")rAdd(c);
   else if(S.tab==="pitchers")rPitchers(c);
+  else if(S.tab==="track")rTrack(c);
   else if(S.tab==="weights")rWeights(c);
+}
+
+// ── TRACK ─────────────────────────────────────────────────────────────────
+function rTrack(c){
+  const graded=S.batters.filter(b=>b.result&&b.result!=="Pending");
+
+  if(graded.length===0){
+    const e=el("div","empty");
+    e.innerHTML=`<div class="empty-icon">📈</div><div class="empty-title">No results yet</div><div class="empty-sub">Mark picks as "Hit HR" or "No HR" on the board to track accuracy</div>`;
+    c.appendChild(e);return;
+  }
+
+  // ── Summary card ──
+  const tierDefs=[
+    {tier:"🔥 FIRE", color:"#5cb870", bg:"rgba(74,156,92,.09)",  border:"rgba(74,156,92,.35)",  correctResult:"Hit HR ✅", correctLabel:"Hit HR",  wrongLabel:"Missed"},
+    {tier:"✅ LEAN", color:"#c8922a", bg:"rgba(200,146,42,.08)", border:"rgba(200,146,42,.30)", correctResult:"Hit HR ✅", correctLabel:"Hit HR",  wrongLabel:"Missed"},
+    {tier:"⏭ SKIP", color:"#7a6848", bg:"rgba(122,104,72,.07)", border:"rgba(122,104,72,.25)", correctResult:"No HR ❌",  correctLabel:"Correctly Avoided", wrongLabel:"Hit anyway (missed)"},
+  ];
+
+  const totalHits=graded.filter(b=>b.result==="Hit HR ✅").length;
+  const totalMiss=graded.filter(b=>b.result==="No HR ❌").length;
+  const fireGraded=graded.filter(b=>b.grade?.tier==="🔥 FIRE");
+  const fireHits=fireGraded.filter(b=>b.result==="Hit HR ✅").length;
+  const skipGraded=graded.filter(b=>b.grade?.tier==="⏭ SKIP");
+  const skipCorrect=skipGraded.filter(b=>b.result==="No HR ❌").length;
+
+  const sumCard=el("div","card");
+  sumCard.innerHTML=`
+    <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:12px">📈 Model Accuracy</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 6px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--green2)">${graded.length}</div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">Graded</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 6px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--green2)">${totalHits}</div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">HR Hits</div>
+      </div>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 6px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:${fireGraded.length?'var(--amber)':'var(--muted)'}">${fireGraded.length?Math.round(fireHits/fireGraded.length*100)+'%':'—'}</div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px">🔥 Fire %</div>
+      </div>
+    </div>`;
+  c.appendChild(sumCard);
+
+  // ── Per-tier accuracy cards ──
+  tierDefs.forEach(td=>{
+    const plays=graded.filter(b=>b.grade?.tier===td.tier);
+    if(plays.length===0)return;
+    const correct=plays.filter(b=>b.result===td.correctResult).length;
+    const wrong=plays.length-correct;
+    const pct=Math.round(correct/plays.length*100);
+    const barW=Math.round(correct/plays.length*100);
+    const isSkip=td.tier==="⏭ SKIP";
+
+    const card=el("div","card");
+    card.style.background=td.bg;
+    card.style.borderColor=td.border;
+    card.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:${td.color}">${td.tier}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:${td.color}">${pct}%</span>
+      </div>
+      <div style="background:var(--border);border-radius:4px;height:6px;margin-bottom:10px;overflow:hidden;">
+        <div style="width:${barW}%;height:100%;background:${td.color};border-radius:4px;transition:width .4s;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;">
+        <span style="color:var(--green2)">✅ ${correct} ${td.correctLabel}</span>
+        <span style="color:var(--red2)">❌ ${wrong} ${td.wrongLabel}</span>
+      </div>
+      ${isSkip?`<div style="font-size:10px;color:var(--muted);margin-top:6px;font-style:italic">Higher % = model correctly identified non-HR spots</div>`:`<div style="font-size:10px;color:var(--muted);margin-top:6px;font-style:italic">Higher % = model correctly identified HR threats</div>`}`;
+    c.appendChild(card);
+  });
+
+  // ── Value edge tracking (only if odds entered) ──
+  const oddsPlays=graded.filter(b=>b.odds&&impliedProb(b.odds)!==null);
+  if(oddsPlays.length>=2){
+    const valuePlays=oddsPlays.filter(b=>{const imp=impliedProb(b.odds);return b.grade&&(b.grade.pct-imp)>=.08;});
+    const valueHits=valuePlays.filter(b=>b.result==="Hit HR ✅").length;
+    const chalkPlays=oddsPlays.filter(b=>{const imp=impliedProb(b.odds);return b.grade&&(b.grade.pct-imp)<.08;});
+    const chalkHits=chalkPlays.filter(b=>b.result==="Hit HR ✅").length;
+    const edgeCard=el("div","card");
+    edgeCard.innerHTML=`
+      <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:10px">💰 Edge vs Chalk</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:rgba(74,156,92,.08);border:1px solid rgba(74,156,92,.25);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Value Plays (8%+ edge)</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--green2)">${valuePlays.length?Math.round(valueHits/valuePlays.length*100)+'%':'—'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">${valueHits}/${valuePlays.length} hit</div>
+        </div>
+        <div style="background:rgba(122,104,72,.07);border:1px solid rgba(122,104,72,.2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Chalk Plays (&lt;8% edge)</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--amber)">${chalkPlays.length?Math.round(chalkHits/chalkPlays.length*100)+'%':'—'}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">${chalkHits}/${chalkPlays.length} hit</div>
+        </div>
+      </div>`;
+    c.appendChild(edgeCard);
+  }
+
+  // ── Recent results list ──
+  const recCard=el("div","card");
+  recCard.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--text);margin-bottom:10px">Recent Results</div>`;
+  const recent=[...graded].sort((a,b)=>(b.id||0)-(a.id||0)).slice(0,20);
+  recent.forEach(b=>{
+    const tc=TIERS[b.grade?.tier]||TIERS["⏭ SKIP"];
+    const isSkip=b.grade?.tier==="⏭ SKIP";
+    const isCorrect=isSkip?(b.result==="No HR ❌"):(b.result==="Hit HR ✅");
+    const row=mk("div",{display:"flex",alignItems:"center",gap:"9px",padding:"8px 0",borderBottom:"1px solid var(--border)"});
+    row.innerHTML=`
+      <span style="font-size:14px">${isCorrect?"✅":"❌"}</span>
+      <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.name}</span>
+      <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:${tc.color}20;color:${tc.color};flex-shrink:0">${b.grade?.tier||"—"}</span>
+      <span style="font-size:10px;color:${b.result.includes("Hit")?"var(--green2)":"var(--red2)"};flex-shrink:0">${b.result}</span>`;
+    recCard.appendChild(row);
+  });
+  c.appendChild(recCard);
 }
 
 // ── BOARD ─────────────────────────────────────────────────────────────────
