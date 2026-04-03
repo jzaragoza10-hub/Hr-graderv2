@@ -183,6 +183,21 @@ input[type=range]{accent-color:var(–green);width:80px;}
 /* Duplicate / share buttons */
 .action-row{display:flex;gap:6px;margin-top:10px;}
 
+/* Lineup spot toggle (pitcher weak spots) */
+.lineup-toggle{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.spot-btn{width:34px;height:34px;border-radius:8px;border:1.5px solid var(--border2);background:var(--card2);color:var(--muted);font-weight:700;font-size:12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.spot-btn.active-spot{border-color:rgba(200,146,42,.7);background:rgba(200,146,42,.15);color:var(--amber2);}
+
+/* Value play badge */
+.value-badge{display:inline-block;padding:2px 7px;border-radius:5px;font-size:9px;font-weight:800;letter-spacing:.08em;font-family:'Rajdhani',sans-serif;}
+.value-badge.edge{background:rgba(74,156,92,.2);border:1px solid rgba(74,156,92,.4);color:var(--green2);}
+.value-badge.fair{background:rgba(200,146,42,.15);border:1px solid rgba(200,146,42,.3);color:var(--amber);}
+.value-badge.fade{background:rgba(192,57,43,.12);border:1px solid rgba(192,57,43,.3);color:var(--red2);}
+
+/* Odds strip */
+.odds-strip{display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap;}
+.odds-pill{padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:var(--card2);border:1px solid var(--border2);color:var(--text2);}
+
 /* Tier config */
 </style>
 
@@ -262,8 +277,8 @@ const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false};
-let BF={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10)};
-let PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
+let BF={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10),odds:""};
+let PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip",weakLineupSpots:""};
 
 function load(){
   try{
@@ -286,18 +301,18 @@ function score(bat,pit){
   const pts=(raw,max)=>Math.max(0,Math.min(Math.round(raw*max),max));
   const B={};
 
-  // EV — vs pitch mix, floors run lower so thresholds adjusted
+  // EV — vs pitch mix, tightened thresholds ~1 mph
   const ev=n(bat.avgEV);
   B.ev=ev===null?{s:0,l:"—"}:{
-    s:pts(ev>=97?1:ev>=95?.90:ev>=93?.75:ev>=91?.56:ev>=89?.36:ev>=87?.18:.06,W.ev.max),
-    l:ev>=96?"Elite":ev>=93?"Strong":ev>=90?"Avg":"Soft"
+    s:pts(ev>=98?1:ev>=96?.90:ev>=94?.75:ev>=92?.56:ev>=90?.36:ev>=88?.18:.06,W.ev.max),
+    l:ev>=97?"Elite":ev>=94?"Strong":ev>=90?"Avg":"Soft"
   };
 
-  // Barrel % — vs pitch mix, 6%+ meaningful
+  // Barrel % — league avg 7-9%, 18%+ elite, 13-17% above avg, 10% average
   const bar=n(bat.barrelPct);
   B.barrel=bar===null?{s:0,l:"—"}:{
-    s:pts(bar>=22?1:bar>=18?.87:bar>=14?.70:bar>=10?.50:bar>=7?.30:bar>=4?.14:.04,W.barrel.max),
-    l:bar>=20?"Elite":bar>=14?"Strong":bar>=9?"Avg":"Soft"
+    s:pts(bar>=18?1:bar>=15?.82:bar>=13?.65:bar>=10?.45:bar>=7?.25:bar>=4?.10:.03,W.barrel.max),
+    l:bar>=18?"Elite":bar>=13?"Strong":bar>=9?"Avg":"Soft"
   };
 
   // HR/FB
@@ -357,42 +372,46 @@ function score(bat,pit){
   if(pW==="Weak vs Both")pl=Math.min(pl+.22,1);
   B.platoon={s:pts(pl,W.platoon.max),l:pl>=.85?"Elite Edge":pl>=.65?"Clear Edge":pl>=.44?"Neutral":"Slight disadvantage"};
 
-  // Pitcher vulnerability
+  // Pitcher vulnerability — ERA reduced, FB% removed, thresholds loosened
   if(pit){
-    const iP=n(pit.isoAllowed),bP=n(pit.barrelAllowed),h9=n(pit.hr9),era=n(pit.era),fbA=n(pit.fbPctAllowed);
+    const iP=n(pit.isoAllowed),bP=n(pit.barrelAllowed),h9=n(pit.hr9),era=n(pit.era);
     let r=0;
-    if(iP!==null)r+=iP>=.24?.30:iP>=.19?.22:iP>=.15?.14:iP>=.11?.07:.02;
-    if(bP!==null)r+=bP>=14?.28:bP>=10?.20:bP>=7?.13:bP>=4?.06:.02;
-    if(h9!==null)r+=h9>=1.8?.24:h9>=1.4?.18:h9>=1.0?.12:h9>=.7?.07:.02;
-    if(era!==null)r+=era>=5?.12:era>=4.2?.08:era>=3.5?.05:.02;
-    if(fbA!==null)r+=fbA>=42?.06:fbA>=36?.04:.01;
-    B.pitcher={s:pts(Math.min(r,1),W.pitcher.max),l:r>=.80?"Very Hittable":r>=.58?"Hittable":r>=.36?"Avg":"Tough"};
+    if(iP!==null)r+=iP>=.22?.30:iP>=.17?.22:iP>=.13?.14:iP>=.09?.07:.02;
+    if(bP!==null)r+=bP>=12?.28:bP>=8?.20:bP>=5?.13:bP>=3?.06:.02;
+    if(h9!==null)r+=h9>=1.6?.24:h9>=1.2?.18:h9>=.9?.12:h9>=.6?.07:.02;
+    if(era!==null)r+=era>=5?.08:era>=4.0?.06:era>=3.5?.03:.01;
+    // Lineup spot weakness boost — small bonus when batter is in pitcher's documented weak spot
+    if(pit.weakLineupSpots&&bat.lineupSpot){
+      const weakSpots=(pit.weakLineupSpots||"").split(",").map(s=>s.trim()).filter(Boolean);
+      if(weakSpots.includes(String(bat.lineupSpot)))r=Math.min(r+.08,1);
+    }
+    B.pitcher={s:pts(Math.min(r,1),W.pitcher.max),l:r>=.78?"Very Hittable":r>=.56?"Hittable":r>=.34?"Avg":"Tough"};
   }else B.pitcher={s:0,l:"No pitcher linked"};
 
   // Park
   const pk=PARKS.find(p=>p.n===bat.park);
   if(pk){
     const f=pk.f;
-    B.park={s:pts(f>=1.18?1:f>=1.12?.85:f>=1.06?.65:f>=1.00?.44:f>=.95?.24:f>=.90?.10:.02,W.park.max),
-      l:f>=1.14?"🔥 HR Park":f>=1.04?"Good":f>=.97?"Neutral":"Suppressive"};
+    B.park={s:pts(f>=1.15?1:f>=1.10?.85:f>=1.05?.65:f>=1.00?.48:f>=.96?.28:f>=.92?.12:.04,W.park.max),
+      l:f>=1.12?"🔥 HR Park":f>=1.04?"Good":f>=.97?"Neutral":"Suppressive"};
   }else B.park={s:0,l:"—"};
 
   // Weather
   const wind=n(bat.windSpeed),temp=n(bat.temp);
-  let wx=.40;
+  let wx=.45;
   if(wind!==null){
     if(bat.windDir==="Blowing Out (↑ toward OF)")wx+=wind>=20?.45:wind>=14?.32:wind>=8?.18:wind>=4?.08:.02;
     else if(bat.windDir==="Blowing In (↓ toward home)")wx-=wind>=18?.32:wind>=10?.20:wind>=5?.10:.02;
     else if(bat.windDir==="Calm / Dome")wx+=.08;
   }
-  if(temp!==null)wx+=temp>=88?.18:temp>=78?.10:temp>=65?.04:temp<50?-.14:0;
+  if(temp!==null)wx+=temp>=85?.18:temp>=75?.10:temp>=62?.04:temp<50?-.14:0;
   wx=Math.max(0,Math.min(wx,1));
   B.weather={s:pts(wx,W.weather.max),l:wx>=.78?"Ideal":wx>=.52?"Favorable":wx>=.32?"Neutral":"Unfavorable"};
 
   // Pitch boost
   const pb=n(bat.batterBarrelVsPitch),pu=n(bat.pitchUsagePct),phr=n(bat.batterHrVsPitch);
   if(pb!==null&&pu!==null&&bat.pitchType&&bat.pitchType!=="None / Skip"){
-    let r=pb>=24&&pu>=48?1:pb>=18&&pu>=36?.72:pb>=12&&pu>=24?.46:pb>=8?.22:.06;
+    let r=pb>=20&&pu>=42?1:pb>=15&&pu>=30?.72:pb>=10&&pu>=20?.46:pb>=6?.22:.06;
     if(phr!==null&&phr>=2)r=Math.min(r+.22,1);
     B.pitchBoost={s:pts(r,W.pitchBoost.max),l:r>=.80?"Strong boost":r>=.50?"Mild boost":"Minimal"};
   }else B.pitchBoost={s:0,l:"N/A"};
@@ -402,6 +421,24 @@ function score(bat,pit){
   const pct=total/maxTotal;
   const tier=getTier(pct);
   return{total,maxTotal,pct,tier,B};
+}
+
+// ── ODDS / VALUE ──────────────────────────────────────────────────────────
+function impliedProb(odds){
+  const raw=String(odds||"").replace(/\s/g,"");
+  if(!raw||raw==="-"||raw==="+")return null;
+  const o=parseFloat(raw);
+  if(isNaN(o))return null;
+  if(o>0)return 100/(o+100);
+  return Math.abs(o)/(Math.abs(o)+100);
+}
+function edgeLabel(gradePct,imp){
+  if(imp===null)return null;
+  const diff=gradePct-imp;
+  if(diff>=.15)return{lbl:"STRONG EDGE",cls:"edge"};
+  if(diff>=.08)return{lbl:"VALUE",cls:"edge"};
+  if(diff>=-.05)return{lbl:"FAIR",cls:"fair"};
+  return{lbl:"FADE",cls:"fade"};
 }
 
 // ── DISCORD POST ──────────────────────────────────────────────────────────
@@ -423,6 +460,7 @@ async function postDiscord(bat,pit,gr){
       {name:"Lineup Spot",value:bat.lineupSpot||"—",inline:true},
       {name:"Date",value:bat.date||"—",inline:true},
       {name:"Platoon",value:`${bat.hand||"?"} vs ${pit?.hand||"?"}`,inline:true},
+      ...(bat.odds?(()=>{const imp=impliedProb(bat.odds);const e=edgeLabel(gr.pct,imp);return [{name:"Odds",value:`${bat.odds} (${imp!==null?Math.round(imp*100)+"% impl.":"—"})`,inline:true},{name:"Edge",value:e?e.lbl:"—",inline:true}];})():[]),
       ...fields,
     ],
     footer:{text:"HR Grader · Pitch-Mix Engine · "+new Date().toLocaleTimeString()},
@@ -603,16 +641,19 @@ function mkCard(bat){
       </div>
       ${bat.result&&bat.result!=="Pending"?`<div style="font-size:11px;font-weight:700;margin-top:3px;color:${bat.result.includes("Hit")?"var(--green2)":"var(--red2)"}">${bat.result}</div>`:""}
       <div class="qs-strip">
-        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.avgEV)>=91?'var(--green2)':parseFloat(bat.avgEV)>=88?'var(--amber)':'var(--red2)'}">${bat.avgEV||"—"}</div><div class="qs-lbl">EV</div></div>
-        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.barrelPct)>=12?'var(--green2)':parseFloat(bat.barrelPct)>=7?'var(--amber)':'var(--muted)'}">${bat.barrelPct!=null?bat.barrelPct+'%':"—"}</div><div class="qs-lbl">Barrel</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.avgEV)>=92?'var(--green2)':parseFloat(bat.avgEV)>=88?'var(--amber)':'var(--red2)'}">${bat.avgEV||"—"}</div><div class="qs-lbl">EV</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.barrelPct)>=13?'var(--green2)':parseFloat(bat.barrelPct)>=8?'var(--amber)':'var(--muted)'}">${bat.barrelPct!=null?bat.barrelPct+'%':"—"}</div><div class="qs-lbl">Barrel</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.fbPct)>=38?'var(--green2)':parseFloat(bat.fbPct)>=28?'var(--amber)':'var(--red2)'}">${bat.fbPct!=null?bat.fbPct+'%':"—"}</div><div class="qs-lbl">FB%</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.gbPct)<=32?'var(--green2)':parseFloat(bat.gbPct)<=44?'var(--amber)':'var(--red2)'}">${bat.gbPct!=null?bat.gbPct+'%':"—"}</div><div class="qs-lbl">GB%</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.pullPct)>=38?'var(--green2)':parseFloat(bat.pullPct)>=28?'var(--amber)':'var(--muted)'}">${bat.pullPct!=null?bat.pullPct+'%':"—"}</div><div class="qs-lbl">Pull</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.hrVsPitcher)>=2?'var(--green2)':parseFloat(bat.hrVsPitcher)>=1?'var(--amber)':'var(--muted)'}">${bat.hrVsPitcher!=null?bat.hrVsPitcher:'—'}</div><div class="qs-lbl">HR vs P</div></div>
+        ${bat.odds?`<div class="qs"><div class="qs-val" style="color:var(--text2);font-size:10px">${bat.odds}</div><div class="qs-lbl">Odds</div></div>`:""}
       </div>
+      ${(()=>{const imp=impliedProb(bat.odds);if(!bat.odds||imp===null)return "";const e=edgeLabel(g.pct,imp);return `<div class="odds-strip"><span class="odds-pill">${Math.round(imp*100)}% impl.</span><span class="odds-pill">Grade ${Math.round(g.pct*100)}%</span><span class="odds-pill" style="color:${g.pct>=imp?'var(--green2)':'var(--red2)'}">${g.pct-imp>=0?"+":""}${Math.round((g.pct-imp)*100)}pts edge</span></div>`;})()}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
       <span class="verdict" style="background:${tc.color}22;color:${tc.color};border:1px solid ${tc.color}55;">${g.tier}</span>
+      ${(()=>{const imp=impliedProb(bat.odds);const e=edgeLabel(g.pct,imp);return bat.odds&&e?`<span class="value-badge ${e.cls}">${e.lbl}</span>`:"";})()}
       <span style="font-size:18px;color:var(--muted);line-height:1" class="toggle-ch">▾</span>
     </div>`;
 
@@ -800,6 +841,21 @@ function rAdd(c){
   const humI=inp("number",f.humidity,"55");humI.oninput=e=>f.humidity=e.target.value;
   card.appendChild(g2(fld("Wind (mph)",wsI),fld("Direction",wdSel,1),fld("Temp (°F)",tempI),fld("Humidity %",humI)));
 
+  // ── Odds & Value ──
+  card.appendChild(sec("💰","Odds & Value","American odds (+150, -110) — auto-calculates edge vs your grade"));
+  const oddsI=inp("text",f.odds,"+150 or -110");oddsI.style.letterSpacing=".04em";
+  const oddsPreview=mk("div",{padding:"10px 12px",background:"var(--card2)",border:"1px solid var(--border2)",borderRadius:"9px",fontSize:"13px",color:"var(--muted)",fontFamily:"'JetBrains Mono',monospace",minHeight:"40px",display:"flex",alignItems:"center"});
+  function updateOddsPreview(){
+    const prob=impliedProb(f.odds);
+    if(prob===null){oddsPreview.textContent="—";return;}
+    const gr=score(f,S.pitchers.find(p=>String(p.id)===String(f.pitcherId)));
+    const e=edgeLabel(gr.pct,prob);
+    oddsPreview.innerHTML=`<span style="color:var(--text2)">${Math.round(prob*100)}% impl.</span>${e?` <span class="value-badge ${e.cls}">${e.lbl}</span>`:""}`;
+  }
+  oddsI.oninput=e=>{f.odds=e.target.value;updateOddsPreview();};
+  card.appendChild(g2(fld("American Odds",oddsI),fld("Edge Preview",oddsPreview)));
+  if(f.pitcherId)updateOddsPreview();
+
   // Submit
   const sub=el("button","btn-primary","⚡ GRADE THIS MATCHUP");
   sub.style.marginTop="22px";
@@ -812,7 +868,7 @@ function rAdd(c){
     S.batters.unshift(bat);save();
     // Reset form but keep pitcher + park for quick multi-entry
     BF={hand:f.hand,bvpSource:"Direct BvP (vs this pitcher)",windDir:f.windDir,pitchType:"None / Skip",
-        date:f.date,pitcherId:f.pitcherId,park:f.park,windSpeed:f.windSpeed,temp:f.temp,windDir:f.windDir};
+        date:f.date,pitcherId:f.pitcherId,park:f.park,windSpeed:f.windSpeed,temp:f.temp,odds:""};
     S.tab="board";render();
     toast(`✅ ${bat.name} graded — ${gr.tier}`);
   };
@@ -843,7 +899,8 @@ function mkPitCard(p){
     <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--text)">${p.name} <span style="color:var(--muted);font-weight:500;font-size:12px">· ${p.team||"—"}</span></div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.7">ERA ${p.era||"—"} · HR/9 ${p.hr9||"—"} · ISO Allow ${p.isoAllowed||"—"} · Barrel% ${p.barrelAllowed||"—"}%</div>
     ${p.platoonWeakness&&p.platoonWeakness!=="None / Unknown"?`<div style="font-size:11px;font-weight:600;color:#c084a0;margin-top:4px">⚔️ ${p.platoonWeakness}</div>`:""}
-    ${p.vsLHBhr9||p.vsRHBhr9?`<div style="font-size:10px;color:var(--muted2);margin-top:2px">${p.vsLHBhr9?`HR/9 vs LHB: ${p.vsLHBhr9}`:""}${p.vsLHBhr9&&p.vsRHBhr9?" · ":""}${p.vsRHBhr9?`HR/9 vs RHB: ${p.vsRHBhr9}`:""}</div>`:""}`;
+    ${p.vsLHBhr9||p.vsRHBhr9?`<div style="font-size:10px;color:var(--muted2);margin-top:2px">${p.vsLHBhr9?`HR/9 vs LHB: ${p.vsLHBhr9}`:""}${p.vsLHBhr9&&p.vsRHBhr9?" · ":""}${p.vsRHBhr9?`HR/9 vs RHB: ${p.vsRHBhr9}`:""}</div>`:""}
+    ${p.weakLineupSpots?`<div style="font-size:10px;color:var(--amber);margin-top:3px">📍 Weak vs spots: ${p.weakLineupSpots}</div>`:""}`;
   const acts=mk("div",{display:"flex",gap:"5px",flexShrink:"0"});
   const ed=el("button","btn-icon","✏️");
   ed.onclick=()=>{PF={...p};S.pitchers=S.pitchers.filter(x=>x.id!==p.id);save();S.pitcherForm=true;render();};
@@ -881,11 +938,36 @@ function mkPitForm(){
   const rhbI=inp("number",f.vsRHBhr9,"0.9");rhbI.oninput=e=>f.vsRHBhr9=e.target.value;
   card.appendChild(g2(fld("Weak vs",pwSel,2),fld("HR/9 vs LHB",lhbI),fld("HR/9 vs RHB",rhbI)));
 
+  // ── Lineup Spot Weakness ──
+  card.appendChild(sec("📍","Weak Lineup Spots","Batting positions this pitcher struggles against most (PropFinders-style)"));
+  const wsInfoBox=el("div","info-box","Tap the spots where this pitcher gives up the most damage. Matched batters get a small score boost.");
+  card.appendChild(wsInfoBox);
+  const wsWrap=el("div");
+  const wsLbl=mk("label",null,"Weak vs Lineup Spot");wsLbl.className="field-label";
+  const wsToggle=el("div","lineup-toggle");
+  function getWeakSpots(){return(f.weakLineupSpots||"").split(",").map(s=>s.trim()).filter(Boolean);}
+  ["1","2","3","4","5","6","7","8","9"].forEach(spot=>{
+    const btn=el("button","spot-btn"+(getWeakSpots().includes(spot)?" active-spot":""),spot);
+    btn.type="button";
+    btn.onclick=()=>{
+      const spots=getWeakSpots();
+      const idx=spots.indexOf(spot);
+      if(idx>=0)spots.splice(idx,1);else spots.push(spot);
+      f.weakLineupSpots=spots.sort((a,b)=>parseInt(a)-parseInt(b)).join(",");
+      Array.from(wsToggle.children).forEach((b,i)=>{
+        b.className="spot-btn"+(getWeakSpots().includes(String(i+1))?" active-spot":"");
+      });
+    };
+    wsToggle.appendChild(btn);
+  });
+  wsWrap.appendChild(wsLbl);wsWrap.appendChild(wsToggle);
+  card.appendChild(wsWrap);
+
   const saveBtn=el("button","btn-secondary","＋ Save Pitcher");saveBtn.style.marginTop="14px";
   saveBtn.onclick=()=>{
     if(!f.name||!f.name.trim())return alert("Enter pitcher name.");
     S.pitchers.push({...f,id:f.id||Date.now()});
-    PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip"};
+    PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip",weakLineupSpots:""};
     S.pitcherForm=false;save();render();
   };
   const cancelBtn=el("button","btn-sm","Cancel");cancelBtn.style.cssText="margin-top:8px;width:100%;padding:10px;";
