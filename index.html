@@ -225,13 +225,13 @@ const DISCORD_WEBHOOK="https://discord.com/api/webhooks/1489357277432512564/idas
 
 // ── TIER CONFIG ───────────────────────────────────────────────────────────
 const TIERS={
-  "🔥 FIRE":  {key:"fire",  color:"#5cb870",bg:"rgba(74,156,92,.09)", border:"rgba(74,156,92,.35)", minPct:.70, label:"Back it"},
-  "✅ LEAN":  {key:"lean",  color:"#c8922a",bg:"rgba(200,146,42,.08)",border:"rgba(200,146,42,.30)",minPct:.52, label:"Situational"},
+  "🔥 FIRE":  {key:"fire",  color:"#5cb870",bg:"rgba(74,156,92,.09)", border:"rgba(74,156,92,.35)", minPct:.67, label:"Back it"},
+  "✅ LEAN":  {key:"lean",  color:"#c8922a",bg:"rgba(200,146,42,.08)",border:"rgba(200,146,42,.30)",minPct:.50, label:"Situational"},
   "⏭ SKIP":  {key:"skip",  color:"#c0392b",bg:"rgba(192,57,43,.07)", border:"rgba(192,57,43,.25)", minPct:0,   label:"Pass"},
 };
 function getTier(pct){
-  if(pct>=.70)return "🔥 FIRE";
-  if(pct>=.52)return "✅ LEAN";
+  if(pct>=.67)return "🔥 FIRE";
+  if(pct>=.50)return "✅ LEAN";
   return "⏭ SKIP";
 }
 
