@@ -433,33 +433,58 @@ async function scanImageStats(formType,onResult){
   fileInp.type="file";fileInp.accept="image/*";
   fileInp.onchange=async e=>{
     const file=e.target.files[0];if(!file)return;
-    toast("🔍 Scanning image…",5000);
+    toast("🔍 Scanning image…",8000);
     const reader=new FileReader();
     reader.onload=async ev=>{
       try{
         const b64=ev.target.result.split(",")[1];
         const mime=file.type||"image/jpeg";
         const prompt=formType==="batter"?
-`Extract baseball batter stats from this screenshot (PropFinders, Baseball Savant, etc).
-Return ONLY a valid JSON object — null for any stat not visible:
-{"playerName":null,"avgEV":null,"barrelPct":null,"hrFbPct":null,"hardHitPct":null,"iso":null,"fbPct":null,"gbPct":null,"ldPct":null,"pullPct":null,"hrVsPitcher":null,"abVsPitcher":null,"slgVsPitcher":null}`:
-`Extract baseball pitcher stats from this screenshot.
-Return ONLY a valid JSON object — null for any stat not visible:
-{"pitcherName":null,"team":null,"era":null,"hr9":null,"isoAllowed":null,"barrelAllowed":null}`;
+`Look at this baseball stats screenshot and extract batter statistics. This may be from PropFinders, Baseball Savant, or a similar site.
+Return ONLY a JSON object with these keys (number values only, use null if not found):
+{
+  "playerName": "string or null",
+  "avgEV": exit velocity in mph as number,
+  "barrelPct": barrel percentage as number (e.g. 14.2),
+  "hrFbPct": HR per fly ball percentage as number,
+  "hardHitPct": hard hit percentage as number,
+  "iso": isolated power as decimal (e.g. 0.220),
+  "fbPct": fly ball percentage as number,
+  "gbPct": ground ball percentage as number,
+  "ldPct": line drive percentage as number,
+  "pullPct": pull percentage as number,
+  "hrVsPitcher": home runs vs this pitcher as number,
+  "abVsPitcher": at bats vs this pitcher as number,
+  "slgVsPitcher": slugging vs this pitcher as decimal
+}`:
+`Look at this baseball stats screenshot and extract pitcher statistics.
+Return ONLY a JSON object with these keys (use null if not found):
+{
+  "pitcherName": "string or null",
+  "team": "team abbreviation or null",
+  "era": ERA as number,
+  "hr9": home runs per 9 innings as number,
+  "isoAllowed": ISO allowed as decimal,
+  "barrelAllowed": barrel percentage allowed as number
+}`;
         const res=await fetch("https://api.anthropic.com/v1/messages",{
           method:"POST",
           headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-          body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:400,messages:[{role:"user",content:[
+          body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:600,messages:[{role:"user",content:[
             {type:"image",source:{type:"base64",media_type:mime,data:b64}},
             {type:"text",text:prompt}
           ]}]})
         });
         const data=await res.json();
-        if(!res.ok)throw new Error(data.error?.message||"API error");
-        const raw=data.content[0].text.trim().replace(/```json|```/g,"").trim();
-        onResult(JSON.parse(raw));
+        if(!res.ok)throw new Error(data.error?.message||`API error ${res.status}`);
+        const raw=data.content[0].text.trim().replace(/```json\n?|```\n?/g,"").trim();
+        const parsed=JSON.parse(raw);
+        onResult(parsed);
         toast("✅ Stats extracted — review & adjust");
-      }catch(err){console.error(err);toast("⚠️ Scan failed — check image or API key");}
+      }catch(err){
+        console.error("Scan error:",err);
+        toast("⚠️ "+( err.message||"Scan failed — check API key in Settings"),4000);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -922,7 +947,7 @@ function rAdd(c){
       if(result.hrVsPitcher!==null)f.hrVsPitcher=result.hrVsPitcher;
       if(result.abVsPitcher!==null)f.abVsPitcher=result.abVsPitcher;
       if(result.slgVsPitcher!==null)f.slgVsPitcher=result.slgVsPitcher;
-      rAdd(document.getElementById("content"));
+      render();
     }));
   }
 
@@ -1111,8 +1136,7 @@ function mkPitForm(){
       if(result.isoAllowed!==null)f.isoAllowed=result.isoAllowed;
       if(result.barrelAllowed!==null)f.barrelAllowed=result.barrelAllowed;
       S.pitcherForm=true;
-      document.getElementById("content").innerHTML="";
-      rPitchers(document.getElementById("content"));
+      render();
     }));
   }
 
