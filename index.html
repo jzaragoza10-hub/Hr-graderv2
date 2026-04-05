@@ -372,14 +372,15 @@ function score(bat,pit){
   if(pW==="Weak vs Both")pl=Math.min(pl+.22,1);
   B.platoon={s:pts(pl,W.platoon.max),l:pl>=.85?"Elite Edge":pl>=.65?"Clear Edge":pl>=.44?"Neutral":"Slight disadvantage"};
 
-  // Pitcher vulnerability — ERA reduced, FB% removed, thresholds loosened
+  // Pitcher vulnerability — Hard Hit% allowed replaces ERA, FB% removed, thresholds loosened
   if(pit){
-    const iP=n(pit.isoAllowed),bP=n(pit.barrelAllowed),h9=n(pit.hr9),era=n(pit.era);
+    const iP=n(pit.isoAllowed),bP=n(pit.barrelAllowed),h9=n(pit.hr9);
     let r=0;
     if(iP!==null)r+=iP>=.22?.30:iP>=.17?.22:iP>=.13?.14:iP>=.09?.07:.02;
     if(bP!==null)r+=bP>=12?.28:bP>=8?.20:bP>=5?.13:bP>=3?.06:.02;
     if(h9!==null)r+=h9>=1.6?.24:h9>=1.2?.18:h9>=.9?.12:h9>=.6?.07:.02;
-    if(era!==null)r+=era>=5?.08:era>=4.0?.06:era>=3.5?.03:.01;
+    const hhA=n(pit.hardHitAllowed);
+    if(hhA!==null)r+=hhA>=42?.22:hhA>=38?.16:hhA>=34?.11:hhA>=30?.06:.02;
     // Lineup spot weakness boost — small bonus when batter is in pitcher's documented weak spot
     if(pit.weakLineupSpots&&bat.lineupSpot){
       const weakSpots=(pit.weakLineupSpots||"").split(",").map(s=>s.trim()).filter(Boolean);
@@ -1108,7 +1109,7 @@ function mkPitCard(p){
   const info=mk("div",{flex:"1"});
   info.innerHTML=`
     <div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--text)">${p.name} <span style="color:var(--muted);font-weight:500;font-size:12px">· ${p.team||"—"}</span></div>
-    <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.7">ERA ${p.era||"—"} · HR/9 ${p.hr9||"—"} · ISO Allow ${p.isoAllowed||"—"} · Barrel% ${p.barrelAllowed||"—"}%</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px;line-height:1.7">HR/9 ${p.hr9||"—"} · ISO Allow ${p.isoAllowed||"—"} · Barrel% ${p.barrelAllowed||"—"}% · HH% Allow ${p.hardHitAllowed||"—"}%</div>
     ${p.platoonWeakness&&p.platoonWeakness!=="None / Unknown"?`<div style="font-size:11px;font-weight:600;color:#c084a0;margin-top:4px">⚔️ ${p.platoonWeakness}</div>`:""}
     ${p.vsLHBhr9||p.vsRHBhr9?`<div style="font-size:10px;color:var(--muted2);margin-top:2px">${p.vsLHBhr9?`HR/9 vs LHB: ${p.vsLHBhr9}`:""}${p.vsLHBhr9&&p.vsRHBhr9?" · ":""}${p.vsRHBhr9?`HR/9 vs RHB: ${p.vsRHBhr9}`:""}</div>`:""}
     ${p.weakLineupSpots?`<div style="font-size:10px;color:var(--amber);margin-top:3px">📍 Weak vs spots: ${p.weakLineupSpots}</div>`:""}`;
@@ -1143,14 +1144,14 @@ function mkPitForm(){
   const nameI=inp("text",f.name,"e.g. Spencer Strider");nameI.oninput=e=>f.name=e.target.value;
   const teamI=inp("text",f.team,"ATL");teamI.oninput=e=>f.team=e.target.value;
   const handSel=mkSel(["RHP","LHP"],f.hand);handSel.onchange=e=>f.hand=e.target.value;
-  const eraI=inp("number",f.era,"3.50");eraI.oninput=e=>f.era=e.target.value;
   const hr9I=inp("number",f.hr9,"1.20");hr9I.oninput=e=>f.hr9=e.target.value;
   const isoI=inp("number",f.isoAllowed,"0.185");isoI.oninput=e=>f.isoAllowed=e.target.value;
   const barI=inp("number",f.barrelAllowed,"9.0");barI.oninput=e=>f.barrelAllowed=e.target.value;
+  const hhAI=inp("number",f.hardHitAllowed,"38");hhAI.oninput=e=>f.hardHitAllowed=e.target.value;
   card.appendChild(g2(
     fld("Name",nameI,2),
     fld("Team",teamI),fld("Throws",handSel),
-    fld("ERA",eraI),fld("HR/9",hr9I),
+    fld("HR/9",hr9I),fld("Hard Hit% Allowed",hhAI),
     fld("ISO Allowed",isoI),fld("Barrel% Allowed",barI)
   ));
 
