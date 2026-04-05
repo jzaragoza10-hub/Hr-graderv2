@@ -995,7 +995,17 @@ function rAdd(c){
   if(f.pitcherId&&f.hand)updatePlatoon();
 
   // Park + Date + Lineup
-  const pkSel=mkSel(PARKS.map(p=>p.n),f.park,"Select park…");pkSel.onchange=e=>f.park=e.target.value;
+  const pkSel=mkSel(PARKS.map(p=>p.n),f.park,"Select park…");
+  pkSel.onchange=e=>{
+    f.park=e.target.value;
+    // Auto-fill weather from another batter at same park on same date
+    const match=S.batters.find(b=>b.park===f.park&&b.date===f.date&&(b.windSpeed||b.temp));
+    if(match){
+      f.windSpeed=match.windSpeed;f.windDir=match.windDir;
+      f.temp=match.temp;f.humidity=match.humidity;
+      render();toast("🌤 Weather auto-filled from today's slate");
+    }
+  };
   const dateI=inp("date",f.date);dateI.onchange=e=>f.date=e.target.value;
   const luSel=mkSel(["1","2","3","4","5","6","7","8","9"],f.lineupSpot,"—");luSel.onchange=e=>f.lineupSpot=e.target.value;
   card.appendChild(g3(fld("Park",pkSel,2),fld("Lineup Spot",luSel)));
