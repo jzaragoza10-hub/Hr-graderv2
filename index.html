@@ -1259,7 +1259,7 @@ function rWeights(c){
   // Weights
   const wCard=el("div","card");
   const maxTotal=Object.values(W).reduce((a,w)=>a+w.max,0);
-  const fire=Math.round(maxTotal*.70),lean=Math.round(maxTotal*.52);
+  const fire=Math.round(maxTotal*TIERS["🔥 FIRE"].minPct),lean=Math.round(maxTotal*TIERS["✅ LEAN"].minPct);
   wCard.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px"><div><div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text)">Scoring Weights</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Drag slider to adjust each factor's max points</div></div><div style="text-align:right"><div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green2);font-weight:700">${maxTotal} pts max</div><div style="font-size:10px;color:var(--muted);margin-top:2px">🔥 ≥${fire} · ✅ ≥${lean}</div></div></div>`;
 
   Object.entries(W).forEach(([k,w])=>{
