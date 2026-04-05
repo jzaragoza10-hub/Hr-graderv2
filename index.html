@@ -966,7 +966,7 @@ function rAdd(c){
   const ht=el("div","hand-toggle");
   ["RHB","LHB","Switch"].forEach(h=>{
     const b=el("button","hand-btn"+(f.hand===h?` active-${h==="Switch"?"sw":h.toLowerCase()}`:""),h);
-    b.onclick=()=>{f.hand=h;save();rAdd(document.getElementById("content"));};
+    b.onclick=()=>{f.hand=h;render();};
     ht.appendChild(b);
   });
   hWrap.appendChild(hLbl);hWrap.appendChild(ht);
