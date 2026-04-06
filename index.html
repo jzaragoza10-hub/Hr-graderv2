@@ -1333,7 +1333,7 @@ function importData(file){
 function parseCSV(text){
   // Strip BOM (Excel adds \uFEFF at start)
   text=text.replace(/^\uFEFF/,"");
-  const lines=text.trim().split(/\r?\n/);
+  const lines=text.trim().split(/\r?\n/).filter(l=>l.trim());
   if(lines.length<2)return{rows:[],headers:[]};
   // Auto-detect delimiter: tab vs comma vs semicolon
   const firstLine=lines[0];
@@ -1341,8 +1341,7 @@ function parseCSV(text){
   const commas=firstLine.split(",").length;
   const semis=firstLine.split(";").length;
   const delim=tabs>=commas&&tabs>=semis?"\t":semis>commas?";":",";
-  const headers=firstLine.split(delim).map(h=>h.trim().replace(/^"|"$/g,"").toUpperCase());
-  const rows=lines.slice(1).map(line=>{
+  function splitLine(line){
     const cols=[];let cur="";let inQ=false;
     for(let i=0;i<line.length;i++){
       const ch=line[i];
@@ -1351,6 +1350,20 @@ function parseCSV(text){
       else cur+=ch;
     }
     cols.push(cur.trim());
+    return cols;
+  }
+  // Find the real header row — skip super-headers like "SPLIT,,2025 METRICS"
+  // The real header row is the first row where a cell contains "PITCHER" or "NAME" or "PLAYER"
+  let headerIdx=0;
+  for(let i=0;i<Math.min(lines.length-1,5);i++){
+    const cells=splitLine(lines[i]).map(h=>h.trim().replace(/^"|"$/g,"").toUpperCase());
+    if(cells.some(h=>h==="PITCHER"||h==="NAME"||h==="PLAYER"||h==="BATTER")){
+      headerIdx=i;break;
+    }
+  }
+  const headers=splitLine(lines[headerIdx]).map(h=>h.trim().replace(/^"|"$/g,"").toUpperCase());
+  const rows=lines.slice(headerIdx+1).map(line=>{
+    const cols=splitLine(line);
     const row={};
     headers.forEach((h,i)=>{row[h]=(cols[i]||"").replace(/^"|"$/g,"").trim();});
     return row;
@@ -1360,11 +1373,12 @@ function parseCSV(text){
 
 function colVal(row,...keys){
   for(const k of keys){
-    // Try exact match first, then partial match on row keys
     const up=k.toUpperCase();
+    // Exact match
     if(row[up]!==undefined&&row[up]!=="")return row[up];
-    // Partial: find a header that contains this key or vice versa
-    const found=Object.keys(row).find(h=>h.includes(up)||up.includes(h));
+    // Partial: header contains key (e.g. "HARD HIT%" contains "HARD HIT")
+    // but never match empty string headers
+    const found=Object.keys(row).find(h=>h.length>0&&h.includes(up));
     if(found&&row[found]!=="")return row[found];
   }
   return "";
