@@ -298,6 +298,8 @@ function load(){
     const b=localStorage.getItem("hrg2-batters");if(b)S.batters=JSON.parse(b);
     const p=localStorage.getItem("hrg2-pitchers");if(p)S.pitchers=JSON.parse(p);
     const w=localStorage.getItem("hrg2-weights");if(w){const saved=JSON.parse(w);Object.keys(saved).forEach(k=>{if(W[k]!==undefined)W[k]=saved[k];});}
+    // Always ensure every default weight key exists (guards against stale localStorage)
+    Object.keys(W_DEFAULT).forEach(k=>{if(!W[k])W[k]=JSON.parse(JSON.stringify(W_DEFAULT[k]));});
   }catch(e){}
 }
 function save(){
@@ -469,7 +471,7 @@ function score(bat,pit){
   // BallparkPal HR probability (decimal: 0.08 = 8%)
   const bp=n(bat.bpHRProb);
   B.bpBoost=bp===null?{s:0,l:"—"}:{
-    s:pts(bp>=.20?1:bp>=.15?.80:bp>=.10?.58:bp>=.07?.38:bp>=.04?.18:.05,W.bpBoost.max),
+    s:pts(bp>=.20?1:bp>=.15?.80:bp>=.10?.58:bp>=.07?.38:bp>=.04?.18:.05,W.bpBoost?.max||10),
     l:bp>=.18?"Elite":bp>=.12?"Strong":bp>=.07?"Avg":"Low"
   };
 
