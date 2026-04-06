@@ -1677,53 +1677,53 @@ function genMatchupInsights(b){
   const points=[];
   const pit=S.pitchers.find(p=>String(p.id)===String(b.pitcherId));
   const G=b.grade.B;
-  const n=v=>parseFloat(v);
+  const n=v=>{const x=parseFloat(v);return isNaN(x)?null:x;};
+  const pct=v=>v!=null?Math.round(v*100)+"%" :null;
 
-  // ── Pitcher vulnerability ──
+  // ── Pitcher vulnerability — always show raw stats ──
   const vulnLbl=G.pitcher?.l||"";
-  if(vulnLbl==="Very Hittable"||vulnLbl==="Hittable"){
-    const parts=[];
-    if(pit){
-      if(n(pit.hr9)>=1.2)parts.push(`HR/9 of ${pit.hr9}`);
-      if(n(pit.barrelAllowed)>=8)parts.push(`${pit.barrelAllowed}% barrel rate allowed`);
-      if(n(pit.hardHitAllowed)>=38)parts.push(`${pit.hardHitAllowed}% hard hit allowed`);
-      if(n(pit.isoAllowed)>=.17)parts.push(`ISO allowed ${pit.isoAllowed}`);
-    }
-    points.push({icon:"🔥",text:`Pitcher is ${vulnLbl.toLowerCase()}${parts.length?" ("+parts.slice(0,2).join(", ")+")":""}`});
-  }else if(vulnLbl==="Tough"&&pit){
-    points.push({icon:"🔒",text:`Tough pitcher — suppress expectations (HR/9 ${pit.hr9||"—"})`});
+  if(pit&&(vulnLbl==="Very Hittable"||vulnLbl==="Hittable"||vulnLbl==="Avg"||vulnLbl==="Tough")){
+    const hr9=n(pit.hr9),bar=n(pit.barrelAllowed),hh=n(pit.hardHitAllowed),iso=n(pit.isoAllowed);
+    const stats=[];
+    if(hr9!=null)stats.push(`HR/9 ${pit.hr9}`);
+    if(bar!=null)stats.push(`Barrel% ${pit.barrelAllowed}%`);
+    if(hh!=null)stats.push(`Hard Hit% ${pit.hardHitAllowed}%`);
+    if(iso!=null)stats.push(`ISO allowed ${pit.isoAllowed}`);
+    const icon=vulnLbl==="Very Hittable"?"🔥":vulnLbl==="Hittable"?"⚡":vulnLbl==="Tough"?"🔒":"⚾";
+    points.push({icon,text:`${pit.name}: ${stats.length?stats.join(" · "):"no stats"} — ${vulnLbl}`});
+  }
+
+  // ── BvP history — always show actual numbers ──
+  const pH=b.pitcherHand,bH=b.hand;
+  const hr=n(b.hrVsPitcher),ab=n(b.abVsPitcher),slg=n(b.slgVsPitcher),avg=n(b.avgVsPitcher),iso=n(b.iso);
+  if(ab!=null&&ab>0){
+    const stats=[];
+    if(hr!=null)stats.push(`${hr} HR`);
+    if(avg!=null)stats.push(`AVG ${b.avgVsPitcher}`);
+    if(slg!=null)stats.push(`SLG ${b.slgVsPitcher}`);
+    if(iso!=null)stats.push(`ISO ${b.iso}`);
+    const tag=hr>=3?"Owns this pitcher":hr>=2?"Strong history":hr>=1?"Has gone deep":avg!=null?"No HRs but productive":"Limited sample";
+    points.push({icon:hr>=2?"💣":hr>=1?"📈":"📋",text:`vs ${b.pitcherName||"pitcher"} in ${ab} ABs: ${stats.join(" · ")} — ${tag}`});
+  }else if(iso!=null){
+    // Splits mode — show ISO vs handedness
+    const stats=[`ISO ${b.iso}`];
+    if(slg!=null)stats.push(`SLG ${b.slgVsPitcher}`);
+    points.push({icon:"📊",text:`vs ${pH||"?"} splits: ${stats.join(" · ")}`});
   }
 
   // ── Platoon edge ──
   const platLbl=G.platoon?.l||"";
-  const pH=b.pitcherHand,bH=b.hand;
   if(platLbl==="Elite Edge"||platLbl==="Clear Edge"){
-    points.push({icon:"⚔️",text:`Strong platoon advantage — ${bH} vs ${pH}${pit?.platoonWeakness&&pit.platoonWeakness!=="None / Unknown"?" · Pitcher documented weak vs "+bH":""}`});
-  }else if(platLbl==="Neutral"){
-    // only mention if nothing else is great
+    const weakness=pit?.platoonWeakness&&pit.platoonWeakness!=="None / Unknown"?` · ${pit.name} documented weak vs ${bH}`:"";
+    points.push({icon:"⚔️",text:`Platoon edge: ${bH} vs ${pH}${weakness}`});
   }else if(platLbl==="Slight disadvantage"){
-    points.push({icon:"⚠️",text:`Same-hand matchup (${bH} vs ${pH}) — platoon works against`});
+    points.push({icon:"⚠️",text:`Same-hand matchup — ${bH} vs ${pH}, platoon works against`});
   }
 
-  // ── BvP history ──
-  const bvpLbl=G.bvp?.l||"";
-  const hr=n(b.hrVsPitcher),ab=n(b.abVsPitcher),slg=n(b.slgVsPitcher),iso=n(b.iso);
-  if(bvpLbl==="Owns pitcher"&&hr>=3){
-    points.push({icon:"💣",text:`${hr} HR in ${ab} ABs vs this pitcher${!isNaN(slg)?" · SLG "+b.slgVsPitcher:""}`});
-  }else if(bvpLbl==="Strong BvP"&&hr>=2){
-    points.push({icon:"📈",text:`${hr} HR in ${ab} ABs — solid history vs this pitcher`});
-  }else if(bvpLbl==="Some history"&&hr>=1){
-    points.push({icon:"📋",text:`${hr} HR in ${ab} ABs — some positive BvP history`});
-  }else if(!isNaN(iso)&&iso>=.22){
-    points.push({icon:"📊",text:`High ISO (${b.iso}) vs ${bH==="LHB"?"RHP":"LHP"} splits`});
-  }else if(!isNaN(slg)&&slg>=.550){
-    points.push({icon:"📊",text:`SLG ${b.slgVsPitcher} in ${ab} ABs — productive vs this pitcher`});
-  }
-
-  // ── Pitcher platoon weakness ──
+  // ── Pitcher platoon weakness (if not already mentioned) ──
   if(pit?.platoonWeakness&&pit.platoonWeakness!=="None / Unknown"&&!points.some(p=>p.text.includes("documented"))){
     if(pit.platoonWeakness.includes(bH)||pit.platoonWeakness==="Weak vs Both"){
-      points.push({icon:"🎯",text:`${pit.name} documented weak vs ${bH} — targeting confirmed`});
+      points.push({icon:"🎯",text:`${pit.name} documented weak vs ${bH}`});
     }
   }
 
@@ -1731,14 +1731,11 @@ function genMatchupInsights(b){
   if(b.lineupSpot&&pit?.weakLineupSpots){
     const spots=(pit.weakLineupSpots||"").split(",").map(s=>s.trim());
     if(spots.includes(String(b.lineupSpot)))
-      points.push({icon:"📍",text:`Batting ${b.lineupSpot} — one of ${pit.name}'s documented weak lineup spots`});
+      points.push({icon:"📍",text:`Batting ${b.lineupSpot} — matches ${pit.name}'s documented weak spot`});
   }
 
-  // If nothing notable, say so
-  if(points.length===0){
-    if(vulnLbl==="Avg")points.push({icon:"➡️",text:"Average matchup — no standout edges or concerns"});
-    else points.push({icon:"➡️",text:"Limited data — grade based on available splits"});
-  }
+  if(points.length===0)
+    points.push({icon:"➡️",text:"No pitcher data loaded — import pitcher CSV for full breakdown"});
 
   return points;
 }
