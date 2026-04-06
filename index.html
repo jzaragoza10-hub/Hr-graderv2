@@ -872,12 +872,15 @@ function rBoard(c){
   tbRow.appendChild(bpTb);
   c.appendChild(tbRow);
 
-  sorted.forEach(b=>c.appendChild(mkCard(b)));
+  sorted.forEach((b,i)=>c.appendChild(mkCard(b,i+1)));
 }
 
-function mkCard(bat){
+function mkCard(bat,rank){
   const g=bat.grade;
-  const tc=TIERS[g.tier];
+  // Sparse = BP import with no pitcher and no BvP stats → rank mode instead of SKIP
+  const sparse=bat.bvpSource==='BallparkPal'&&!bat.pitcherId&&!bat.avgEV&&!bat.hrVsPitcher;
+  const tierOverride=sparse&&g.tier==='⏭ SKIP'&&rank;
+  const tc=tierOverride?{color:'#60c0ff',bg:'rgba(96,192,255,.06)',border:'rgba(96,192,255,.25)'}:TIERS[g.tier];
   const pct=Math.round(g.pct*100);
   const card=el("div","grade-card");
   card.style.background=tc.bg;
@@ -902,6 +905,7 @@ function mkCard(bat){
     </div>
     <div style="flex:1;min-width:0;">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
+        ${rank?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(96,192,255,.12);color:#60c0ff;flex-shrink:0">#${rank}</span>`:''}
         <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:17px;color:var(--text)">${bat.name}</span>
         ${bat.hand?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${handCol}20;color:${handCol}">${bat.hand}</span>`:""}
         ${bat.lineupSpot?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${lineupCol}20;color:${lineupCol}">Spot ${bat.lineupSpot}</span>`:""}
@@ -920,7 +924,7 @@ function mkCard(bat){
       ${(()=>{const imp=impliedProb(bat.odds);if(!bat.odds||imp===null)return "";const e=edgeLabel(g.pct,imp);return `<div class="odds-strip"><span class="odds-pill">${Math.round(imp*100)}% impl.</span><span class="odds-pill">Grade ${Math.round(g.pct*100)}%</span><span class="odds-pill" style="color:${g.pct>=imp?'var(--green2)':'var(--red2)'}">${g.pct-imp>=0?"+":""}${Math.round((g.pct-imp)*100)}pts edge</span></div>`;})()}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
-      <span class="verdict" style="background:${tc.color}22;color:${tc.color};border:1px solid ${tc.color}55;">${g.tier}</span>
+      <span class="verdict" style="background:${tc.color}22;color:${tc.color};border:1px solid ${tc.color}55;">${tierOverride?`#${rank} Ranked`:g.tier}</span>
       ${(()=>{const imp=impliedProb(bat.odds);const e=edgeLabel(g.pct,imp);return bat.odds&&e?`<span class="value-badge ${e.cls}">${e.lbl}</span>`:"";})()}
       <span style="font-size:18px;color:var(--muted);line-height:1" class="toggle-ch">▾</span>
     </div>`;
@@ -981,7 +985,8 @@ function mkCard(bat){
   const delBtn=el("button","btn-sm","🗑");
   delBtn.onclick=e=>{
     e.stopPropagation();
-    if(confirm(`Remove ${bat.name}?`)){S.batters=S.batters.filter(b=>b.id!==bat.id);save();render();}
+    const ov=clearConfirmModal(`Remove ${bat.name}?`,()=>{S.batters=S.batters.filter(b=>b.id!==bat.id);save();render();});
+    document.body.appendChild(ov);
   };
   ar.appendChild(shareBtn);ar.appendChild(dupBtn);ar.appendChild(editBtn);ar.appendChild(delBtn);
   body.appendChild(ar);
