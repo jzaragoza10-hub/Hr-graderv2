@@ -1332,15 +1332,17 @@ function importData(file){
 // ── CSV IMPORT ────────────────────────────────────────────────────────────
 function parseCSV(text){
   const lines=text.trim().split(/\r?\n/);
-  if(lines.length<2)return[];
-  const headers=lines[0].split(",").map(h=>h.trim().replace(/^"|"$/g,"").toUpperCase());
-  return lines.slice(1).map(line=>{
-    // Handle quoted fields with commas inside
+  if(lines.length<2)return{rows:[],headers:[]};
+  // Auto-detect delimiter: tab vs comma
+  const firstLine=lines[0];
+  const delim=firstLine.split("\t").length>firstLine.split(",").length?"\t":",";
+  const headers=firstLine.split(delim).map(h=>h.trim().replace(/^"|"$/g,"").toUpperCase());
+  const rows=lines.slice(1).map(line=>{
     const cols=[];let cur="";let inQ=false;
     for(let i=0;i<line.length;i++){
       const ch=line[i];
       if(ch==='"'){inQ=!inQ;}
-      else if(ch===","&&!inQ){cols.push(cur.trim());cur="";}
+      else if(ch===delim&&!inQ){cols.push(cur.trim());cur="";}
       else cur+=ch;
     }
     cols.push(cur.trim());
@@ -1348,12 +1350,17 @@ function parseCSV(text){
     headers.forEach((h,i)=>{row[h]=(cols[i]||"").replace(/^"|"$/g,"").trim();});
     return row;
   });
+  return{rows,headers};
 }
 
 function colVal(row,...keys){
   for(const k of keys){
-    const val=row[k.toUpperCase()];
-    if(val!==undefined&&val!=="")return val;
+    // Try exact match first, then partial match on row keys
+    const up=k.toUpperCase();
+    if(row[up]!==undefined&&row[up]!=="")return row[up];
+    // Partial: find a header that contains this key or vice versa
+    const found=Object.keys(row).find(h=>h.includes(up)||up.includes(h));
+    if(found&&row[found]!=="")return row[found];
   }
   return "";
 }
@@ -1362,14 +1369,17 @@ function importPitchersCSV(file){
   const r=new FileReader();
   r.onload=e=>{
     try{
-      const rows=parseCSV(e.target.result);
-      let added=0;
+      const {rows,headers}=parseCSV(e.target.result);
+      if(rows.length===0){alert("CSV appears empty or could not be parsed.\nHeaders found: (none)");return;}
+      let added=0,skipped=0;
       rows.forEach(row=>{
-        const name=colVal(row,"PITCHER","NAME","PLAYER");
+        // Try many possible column names for pitcher name
+        const name=colVal(row,"PITCHER","NAME","PLAYER","P","PITCHERNAME","PITCHER NAME");
         if(!name)return;
         // Skip duplicates
-        if(S.pitchers.find(p=>p.name.toLowerCase().trim()===name.toLowerCase().trim()))return;
+        if(S.pitchers.find(p=>p.name.toLowerCase().trim()===name.toLowerCase().trim())){skipped++;return;}
         const pit={
+
           id:Date.now()+Math.random(),
           name,
           team:colVal(row,"TEAM","TM")||"",
@@ -1388,7 +1398,11 @@ function importPitchersCSV(file){
         added++;
       });
       save();render();
-      toast(`✅ ${added} pitcher${added!==1?"s":""} imported`);
+      if(added===0){
+        alert(`No pitchers imported.\n\nHeaders found in your CSV:\n${headers.join(", ")}\n\nExpected a column named PITCHER (or NAME/PLAYER) for the pitcher's name.\n${skipped?skipped+" rows were skipped as duplicates.":""}`);
+      }else{
+        toast(`✅ ${added} pitcher${added!==1?"s":""} imported${skipped?` (${skipped} dupes skipped)`:""}`);
+      }
     }catch(err){alert("CSV import error: "+(err.message||String(err)));}
   };
   r.readAsText(file);
@@ -1398,7 +1412,7 @@ function importBattersCSV(file){
   const r=new FileReader();
   r.onload=e=>{
     try{
-      const rows=parseCSV(e.target.result);
+      const {rows}=parseCSV(e.target.result);
       const slate=[];
       rows.forEach(row=>{
         const name=colVal(row,"BATTER","PLAYER","NAME");
