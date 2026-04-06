@@ -1501,7 +1501,14 @@ function importBattersCSV(file){
           park:"",windDir:"Calm / Dome",pitchType:"None / Skip",odds:"",
         };
         const grade=score(bat,matchedPit||null);
-        slate.push({...bat,grade,matched:!!matchedPit});
+        // Normalize pct against only categories that have real data
+        // (categories with label "—", "No data", "N/A" etc. had no input)
+        const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
+        const filledMax=Object.entries(grade.B).reduce((sum,[k,v])=>{
+          return NO_DATA.has(v.l)?sum:sum+(W[k]?.max||0);
+        },0);
+        const normalizedPct=filledMax>0?Math.min(grade.total/filledMax,1):0;
+        slate.push({...bat,grade,normalizedPct,matched:!!matchedPit});
       });
       S.slate=slate;
       S.slateHandFilter="All";S.slatePitcherFilter="";
@@ -1577,11 +1584,13 @@ function rSlate(c){
     c.appendChild(e);return;
   }
 
+  // Use normalizedPct for slate labels (scores only filled categories)
+  const effPct=b=>b.normalizedPct!==undefined?b.normalizedPct:b.grade.pct;
   // Summary bar
-  const must=filtered.filter(b=>b.grade.pct>=.67).length;
-  const avg=filtered.filter(b=>b.grade.pct>=.50&&b.grade.pct<.67).length;
-  const soft=filtered.filter(b=>b.grade.pct>=.40&&b.grade.pct<.50).length;
-  const avoid=filtered.filter(b=>b.grade.pct<.40).length;
+  const must=filtered.filter(b=>effPct(b)>=.67).length;
+  const avg=filtered.filter(b=>effPct(b)>=.50&&effPct(b)<.67).length;
+  const soft=filtered.filter(b=>effPct(b)>=.40&&effPct(b)<.50).length;
+  const avoid=filtered.filter(b=>effPct(b)<.40).length;
   const bar=el("div","slate-bar");
   bar.style.marginBottom="14px";
   bar.innerHTML=`
@@ -1595,7 +1604,7 @@ function rSlate(c){
   c.appendChild(bar);
 
   // Group by pitcher if no pitcher filter
-  const sorted=[...filtered].sort((a,b)=>b.grade.pct-a.grade.pct);
+  const sorted=[...filtered].sort((a,b)=>effPct(b)-effPct(a));
 
   if(!S.slatePitcherFilter&&pitchers.length>1){
     // Group by pitcher
@@ -1611,8 +1620,8 @@ function rSlate(c){
       const phInfo=mk("div",{flex:"1"});
       phInfo.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--text)">${pitName}</div>`;
       // Targeting summary
-      const mustBats=group.filter(b=>b.grade.pct>=.67);
-      const avgBats=group.filter(b=>b.grade.pct>=.50&&b.grade.pct<.67);
+      const mustBats=group.filter(b=>effPct(b)>=.67);
+      const avgBats=group.filter(b=>effPct(b)>=.50&&effPct(b)<.67);
       const lhbMust=mustBats.filter(b=>b.hand==="LHB").map(b=>b.name).join(", ");
       const rhbMust=mustBats.filter(b=>b.hand==="RHB").map(b=>b.name).join(", ");
       const lhbAvg=avgBats.filter(b=>b.hand==="LHB").map(b=>b.name).join(", ");
@@ -1648,10 +1657,13 @@ function rSlate(c){
 }
 
 function mkSlateRow(b){
-  const sl=getSlateLabel(b.grade.pct);
-  const pct=Math.round(b.grade.pct*100);
+  const ep=b.normalizedPct!==undefined?b.normalizedPct:b.grade.pct;
+  const sl=getSlateLabel(ep);
+  const pct=Math.round(ep*100);
   const handCol=b.hand==="LHB"?"#4a7fa8":b.hand==="RHB"?"#c8922a":"#5cb870";
   const pitVuln=b.grade.B.pitcher;
+  const bvp=b.grade.B.bvp;
+  const platoon=b.grade.B.platoon;
   const row=el("div","slate-row");
   row.innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
@@ -1664,12 +1676,12 @@ function mkSlateRow(b){
       ${b.team?" · "+b.team:""}
       ${!b.matched&&b.pitcherName?` <span style="color:var(--amber)">⚠️ unmatched</span>`:""}
     </div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;">
-      ${b.avgEV?`EV ${b.avgEV} · `:""}${b.barrelPct?`Barrel ${b.barrelPct}% · `:""}${b.hrFbPct?`HR/FB ${b.hrFbPct}% · `:""}${pitVuln?`Pitcher Vuln ${pitVuln.s}/${b.grade.B.pitcher?b.grade.B.pitcher.s:0}`:""} ${pitVuln?`(${pitVuln.l})`:""}
+    <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;line-height:1.6;">
+      ${pitVuln&&pitVuln.l!=="No pitcher linked"?`Pitcher: ${pitVuln.l} · `:""}${platoon?`Platoon: ${platoon.l} · `:""}${bvp&&bvp.l!=="No data"?`BvP: ${bvp.l}`:""}
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);">
-        Score: ${b.grade.total}/${b.grade.maxTotal}
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);">
+        ${b.grade.total} raw pts · normalized
       </div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:${pct>=67?'#5cb870':pct>=50?'#e8a830':pct>=40?'#b89050':'#c0392b'}">${pct}%</div>
     </div>`;
