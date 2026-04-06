@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <title>⚾ HR Grader</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -1648,18 +1649,45 @@ function parseBallparkPal(csvText){
   }).filter(b=>b.name);
 }
 
+function parseBpRows(rows){
+  const handMap={L:'LHB',R:'RHB',S:'Switch'};
+  return rows.map(row=>({
+    name:       row['FullName']||'',
+    team:       row['Team']||'',
+    opponent:   row['Opponent']||'',
+    lineupSpot: row['BattingPosition']||'',
+    hand:       handMap[row['BatterStand']]||'',
+    bpHRProb:   parseFloat(row['HomeRunProbability'])||null,
+    bpHitProb:  parseFloat(row['HitProbability'])||null,
+    bpProjHR:   parseFloat(row['HomeRuns'])||null,
+    bpPointsDK: parseFloat(row['PointsDK'])||null,
+    bpPointsFD: parseFloat(row['PointsFD'])||null,
+  })).filter(b=>b.name);
+}
+
 function mkBpImportBtn(card){
-  const impBtn=el('button','btn-secondary','🅱️ Import BallparkPal CSV');
+  const impBtn=el('button','btn-secondary','🅱️ Import BallparkPal');
   impBtn.type='button';impBtn.style.marginBottom='14px';
   impBtn.onclick=()=>{
     const fi=document.createElement('input');
-    fi.type='file';fi.accept='.csv';
+    fi.type='file';fi.accept='.xlsx,.xls,.csv';
     fi.onchange=e=>{
       const file=e.target.files[0];if(!file)return;
       const reader=new FileReader();
+      const isXlsx=/\.xlsx?$/i.test(file.name);
       reader.onload=ev=>{
-        const players=parseBallparkPal(ev.target.result);
-        if(!players.length){toast('⚠️ No players found in CSV');return;}
+        let players;
+        if(isXlsx){
+          try{
+            const wb=XLSX.read(ev.target.result,{type:'array'});
+            const ws=wb.Sheets[wb.SheetNames[0]];
+            const rows=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
+            players=parseBpRows(rows);
+          }catch(err){toast('⚠️ Failed to parse XLSX: '+err.message);return;}
+        }else{
+          players=parseBallparkPal(ev.target.result);
+        }
+        if(!players.length){toast('⚠️ No players found');return;}
         // Also update any matching slate batters with bpHRProb
         players.forEach(p=>{
           const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
@@ -1693,7 +1721,8 @@ function mkBpImportBtn(card){
         overlay.appendChild(box);
         document.body.appendChild(overlay);
       };
-      reader.readAsText(file);
+      if(isXlsx) reader.readAsArrayBuffer(file);
+      else reader.readAsText(file);
     };
     fi.click();
   };
