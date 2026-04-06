@@ -851,12 +851,24 @@ function rBoard(c){
 
   if(sorted.length===0){
     const e=el("div","empty");
-    e.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">No picks yet</div><div class="empty-sub">${S.pitchers.length?"Tap ＋ Add to grade a batter":"Add pitchers first, then grade matchups"}</div>`;
-    const btn=el("button","btn-outline",S.pitchers.length?"＋ Add Your First Pick":"⚾ Add Pitchers First");
-    btn.style.marginTop="16px";
+    e.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">No picks yet</div><div class="empty-sub">Import BallparkPal to auto-grade today's top batters, or add manually</div>`;
+    const bpBtn=el("button","btn-primary","🅱️ Import BallparkPal");
+    bpBtn.style.marginTop="16px";
+    bpBtn.onclick=()=>triggerBpImport();
+    e.appendChild(bpBtn);
+    const or=mk("div",{color:"var(--muted)",fontSize:"12px",margin:"10px 0"});or.textContent="or";
+    e.appendChild(or);
+    const btn=el("button","btn-outline",S.pitchers.length?"＋ Add Manually":"⚾ Add Pitchers First");
     btn.onclick=()=>{S.tab=S.pitchers.length?"add":"pitchers";render();};
     e.appendChild(btn);c.appendChild(e);return;
   }
+
+  // Board toolbar: re-import BallparkPal
+  const tbRow=mk("div",{display:"flex",justifyContent:"flex-end",marginBottom:"10px",gap:"7px"});
+  const bpTb=el("button","btn-sm","🅱️ Re-import BallparkPal");
+  bpTb.onclick=()=>triggerBpImport();
+  tbRow.appendChild(bpTb);
+  c.appendChild(tbRow);
 
   sorted.forEach(b=>c.appendChild(mkCard(b)));
 }
@@ -1665,6 +1677,58 @@ function parseBpRows(rows){
   })).filter(b=>b.name);
 }
 
+function triggerBpImport(){
+  const fi=document.createElement('input');
+  fi.type='file';fi.accept='.xlsx,.xls,.csv';
+  fi.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    const isXlsx=/\.xlsx?$/i.test(file.name);
+    reader.onload=ev=>{
+      let players;
+      if(isXlsx){
+        try{
+          const wb=XLSX.read(ev.target.result,{type:'array'});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          const rows=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
+          players=parseBpRows(rows);
+        }catch(err){toast('⚠️ Failed to parse XLSX: '+err.message);return;}
+      }else{
+        players=parseBallparkPal(ev.target.result);
+      }
+      if(!players.length){toast('⚠️ No players found');return;}
+      processBpPlayers(players);
+    };
+    if(isXlsx)reader.readAsArrayBuffer(file);
+    else reader.readAsText(file);
+  };
+  fi.click();
+}
+
+function processBpPlayers(players){
+  const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
+  // Update matching slate batters
+  players.forEach(p=>{
+    const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
+    if(sb){
+      sb.bpHRProb=p.bpHRProb;
+      const pit=S.pitchers.find(x=>String(x.id)===String(sb.pitcherId));
+      sb.grade=score(sb,pit||null);
+      const fm=Object.entries(sb.grade.B).reduce((s,[k,v])=>NO_DATA.has(v.l)?s:s+(W[k]?.max||0),0);
+      sb.normalizedPct=fm>0?Math.min(sb.grade.total/fm,1):0;
+    }
+  });
+  const top20=buildBoardFromBP(players);
+  const withPit=top20.filter(b=>b.pitcherId||b.pitcherName).length;
+  const withBvp=top20.filter(b=>b.bvpSource==='Direct BvP (vs this pitcher)').length;
+  if(S.batters.length>0){
+    if(!confirm(`Replace current board (${S.batters.length} batters) with today's top ${top20.length} from BallparkPal?`))return;
+  }
+  S.batters=top20;
+  save();S.tab='board';render();
+  toast(`✅ Board loaded: ${top20.length} batters · ${withBvp} with BvP · ${withPit} with pitcher data`);
+}
+
 function buildBoardFromBP(players){
   const today=new Date().toISOString().slice(0,10);
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
@@ -1703,54 +1767,7 @@ function buildBoardFromBP(players){
 function mkBpImportBtn(card){
   const impBtn=el('button','btn-secondary','🅱️ Import BallparkPal');
   impBtn.type='button';impBtn.style.marginBottom='14px';
-  impBtn.onclick=()=>{
-    const fi=document.createElement('input');
-    fi.type='file';fi.accept='.xlsx,.xls,.csv';
-    fi.onchange=e=>{
-      const file=e.target.files[0];if(!file)return;
-      const reader=new FileReader();
-      const isXlsx=/\.xlsx?$/i.test(file.name);
-      reader.onload=ev=>{
-        let players;
-        if(isXlsx){
-          try{
-            const wb=XLSX.read(ev.target.result,{type:'array'});
-            const ws=wb.Sheets[wb.SheetNames[0]];
-            const rows=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
-            players=parseBpRows(rows);
-          }catch(err){toast('⚠️ Failed to parse XLSX: '+err.message);return;}
-        }else{
-          players=parseBallparkPal(ev.target.result);
-        }
-        if(!players.length){toast('⚠️ No players found');return;}
-        // Update matching slate batters with bpHRProb + re-score
-        players.forEach(p=>{
-          const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
-          const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
-          if(sb){
-            sb.bpHRProb=p.bpHRProb;
-            const pit=S.pitchers.find(x=>String(x.id)===String(sb.pitcherId));
-            sb.grade=score(sb,pit||null);
-            const fm=Object.entries(sb.grade.B).reduce((s,[k,v])=>NO_DATA.has(v.l)?s:s+(W[k]?.max||0),0);
-            sb.normalizedPct=fm>0?Math.min(sb.grade.total/fm,1):0;
-          }
-        });
-        // Build top-20 board
-        const top20=buildBoardFromBP(players);
-        const withPit=top20.filter(b=>b.pitcherId||b.pitcherName).length;
-        const withBvp=top20.filter(b=>b.bvpSource==='Direct BvP (vs this pitcher)').length;
-        if(S.batters.length>0){
-          if(!confirm(`Replace current board (${S.batters.length} batters) with today's top ${top20.length} from BallparkPal?`))return;
-        }
-        S.batters=top20;
-        save();S.tab='board';render();
-        toast(`✅ Board loaded: ${top20.length} batters · ${withBvp} with BvP · ${withPit} with pitcher data`);
-      };
-      if(isXlsx) reader.readAsArrayBuffer(file);
-      else reader.readAsText(file);
-    };
-    fi.click();
-  };
+  impBtn.onclick=()=>triggerBpImport();
   card.appendChild(impBtn);
 }
 
