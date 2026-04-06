@@ -1716,41 +1716,47 @@ function triggerBpImport(){
 }
 
 function processBpPlayers(players){
-  const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
-  players.forEach(p=>{
-    const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
-    if(sb){
-      sb.bpHRProb=p.bpHRProb;
-      const pit=S.pitchers.find(x=>String(x.id)===String(sb.pitcherId));
-      sb.grade=score(sb,pit||null);
-      const fm=Object.entries(sb.grade.B).reduce((s,[k,v])=>NO_DATA.has(v.l)?s:s+(W[k]?.max||0),0);
-      sb.normalizedPct=fm>0?Math.min(sb.grade.total/fm,1):0;
+  try{
+    toast('⚙️ Building board…');
+    const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
+    players.forEach(p=>{
+      const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
+      if(sb){
+        sb.bpHRProb=p.bpHRProb;
+        const pit=S.pitchers.find(x=>String(x.id)===String(sb.pitcherId));
+        sb.grade=score(sb,pit||null);
+        const fm=Object.entries(sb.grade.B).reduce((s,[k,v])=>NO_DATA.has(v.l)?s:s+(W[k]?.max||0),0);
+        sb.normalizedPct=fm>0?Math.min(sb.grade.total/fm,1):0;
+      }
+    });
+    const top20=buildBoardFromBP(players);
+    toast('🏆 Top '+top20.length+' graded — loading board…');
+    const withPit=top20.filter(b=>b.pitcherId||b.pitcherName).length;
+    const withBvp=top20.filter(b=>b.bvpSource==='Direct BvP (vs this pitcher)').length;
+    const doLoad=()=>{
+      S.batters=top20;save();S.tab='board';render();
+      toast(`✅ Board loaded: ${top20.length} batters · ${withBvp} with BvP · ${withPit} with pitcher data`);
+    };
+    if(S.batters.length>0){
+      const ov=el('div','');
+      Object.assign(ov.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.8)',zIndex:'300',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'});
+      const box=el('div','card');
+      box.style.cssText='max-width:340px;width:100%;padding:20px;text-align:center;';
+      box.innerHTML=`<div style="font-weight:700;font-size:16px;margin-bottom:8px">Replace Board?</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">Load top ${top20.length} from BallparkPal?<br>Current ${S.batters.length} picks will be replaced.</div>`;
+      const yes=el('button','btn-primary','✅ Yes, Load Board');
+      yes.style.width='100%';
+      yes.onclick=()=>{document.body.removeChild(ov);doLoad();};
+      const no=el('button','btn-secondary','Cancel');
+      no.style.cssText='width:100%;margin-top:8px;';
+      no.onclick=()=>document.body.removeChild(ov);
+      box.appendChild(yes);box.appendChild(no);
+      ov.appendChild(box);document.body.appendChild(ov);
+    }else{
+      doLoad();
     }
-  });
-  const top20=buildBoardFromBP(players);
-  const withPit=top20.filter(b=>b.pitcherId||b.pitcherName).length;
-  const withBvp=top20.filter(b=>b.bvpSource==='Direct BvP (vs this pitcher)').length;
-  const doLoad=()=>{
-    S.batters=top20;save();S.tab='board';render();
-    toast(`✅ Board loaded: ${top20.length} batters · ${withBvp} with BvP · ${withPit} with pitcher data`);
-  };
-  if(S.batters.length>0){
-    // Use custom modal — iOS PWA blocks native confirm()
-    const ov=el('div','');
-    Object.assign(ov.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.8)',zIndex:'300',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'});
-    const box=el('div','card');
-    box.style.cssText='max-width:340px;width:100%;padding:20px;text-align:center;';
-    box.innerHTML=`<div style="font-weight:700;font-size:16px;margin-bottom:8px">Replace Board?</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">Load top ${top20.length} from BallparkPal?<br>Current ${S.batters.length} picks will be replaced.</div>`;
-    const yes=el('button','btn-primary','✅ Yes, Load Board');
-    yes.style.width='100%';
-    yes.onclick=()=>{document.body.removeChild(ov);doLoad();};
-    const no=el('button','btn-secondary','Cancel');
-    no.style.cssText='width:100%;margin-top:8px;';
-    no.onclick=()=>document.body.removeChild(ov);
-    box.appendChild(yes);box.appendChild(no);
-    ov.appendChild(box);document.body.appendChild(ov);
-  }else{
-    doLoad();
+  }catch(err){
+    toast('❌ Error: '+err.message);
+    console.error('processBpPlayers error:',err);
   }
 }
 
