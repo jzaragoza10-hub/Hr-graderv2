@@ -1331,11 +1331,16 @@ function importData(file){
 
 // ── CSV IMPORT ────────────────────────────────────────────────────────────
 function parseCSV(text){
+  // Strip BOM (Excel adds \uFEFF at start)
+  text=text.replace(/^\uFEFF/,"");
   const lines=text.trim().split(/\r?\n/);
   if(lines.length<2)return{rows:[],headers:[]};
-  // Auto-detect delimiter: tab vs comma
+  // Auto-detect delimiter: tab vs comma vs semicolon
   const firstLine=lines[0];
-  const delim=firstLine.split("\t").length>firstLine.split(",").length?"\t":",";
+  const tabs=firstLine.split("\t").length;
+  const commas=firstLine.split(",").length;
+  const semis=firstLine.split(";").length;
+  const delim=tabs>=commas&&tabs>=semis?"\t":semis>commas?";":",";
   const headers=firstLine.split(delim).map(h=>h.trim().replace(/^"|"$/g,"").toUpperCase());
   const rows=lines.slice(1).map(line=>{
     const cols=[];let cur="";let inQ=false;
@@ -1370,12 +1375,14 @@ function importPitchersCSV(file){
   r.onload=e=>{
     try{
       const {rows,headers}=parseCSV(e.target.result);
-      if(rows.length===0){alert("CSV appears empty or could not be parsed.\nHeaders found: (none)");return;}
+      if(rows.length===0){alert("CSV appears empty.\nHeaders: "+(headers.join(", ")||"none"));return;}
       let added=0,skipped=0;
+      // Find which column holds pitcher names (first text column as fallback)
+      const nameCol=headers.find(h=>["PITCHER","NAME","PLAYER","P","PITCHERNAME"].includes(h))||headers[0];
       rows.forEach(row=>{
-        // Try many possible column names for pitcher name
-        const name=colVal(row,"PITCHER","NAME","PLAYER","P","PITCHERNAME","PITCHER NAME");
-        if(!name)return;
+        // Try named columns first, then fallback to detected name column, then first column
+        const name=colVal(row,"PITCHER","NAME","PLAYER","P","PITCHERNAME")||row[nameCol]||Object.values(row)[0]||"";
+        if(!name||name.match(/^\d/))return; // skip empty or number-only rows
         // Skip duplicates
         if(S.pitchers.find(p=>p.name.toLowerCase().trim()===name.toLowerCase().trim())){skipped++;return;}
         const pit={
@@ -1399,7 +1406,8 @@ function importPitchersCSV(file){
       });
       save();render();
       if(added===0){
-        alert(`No pitchers imported.\n\nHeaders found in your CSV:\n${headers.join(", ")}\n\nExpected a column named PITCHER (or NAME/PLAYER) for the pitcher's name.\n${skipped?skipped+" rows were skipped as duplicates.":""}`);
+        alert(`No pitchers imported.\n\nHeaders in your CSV:\n${headers.join(", ")}\n\nUsed "${nameCol}" as name column.\n${skipped?skipped+" rows skipped as duplicates.":"Send this message to Claude to fix the column mapping."}`);
+
       }else{
         toast(`✅ ${added} pitcher${added!==1?"s":""} imported${skipped?` (${skipped} dupes skipped)`:""}`);
       }
