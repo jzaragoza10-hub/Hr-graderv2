@@ -1612,13 +1612,30 @@ function rSlate(c){
       const group=sorted.filter(b=>b.pitcherName===pitName);
       if(group.length===0)return;
       const pit=S.pitchers.find(p=>p.name===pitName)||{name:pitName,hand:"?"};
-      // Pitcher header
+      // Pitcher vulnerability from any batter in the group
+      const sampleVuln=group[0]?.grade?.B?.pitcher;
+      const vulnLbl=sampleVuln?.l||"";
+      const isVeryHittable=vulnLbl==="Very Hittable";
+      const isHittable=vulnLbl==="Hittable";
+      const isTough=vulnLbl==="Tough";
+      const vulnColor=isVeryHittable?"#3d9e60":isHittable?"#7db860":isTough?"#c0392b":"#6e6585";
+      const vulnBg=isVeryHittable?"rgba(61,158,96,.13)":isHittable?"rgba(125,184,96,.08)":isTough?"rgba(192,57,43,.07)":"transparent";
+      const vulnBorder=isVeryHittable?"rgba(61,158,96,.45)":isHittable?"rgba(125,184,96,.30)":isTough?"rgba(192,57,43,.25)":"var(--border)";
+      const vulnTag=isVeryHittable?"🔥 VERY HITTABLE":isHittable?"⚡ HITTABLE":isTough?"🔒 TOUGH":vulnLbl||"";
+
+      // Pitcher header card — color-coded by vulnerability
       const ph=el("div","slate-pitcher-hdr");
+      ph.style.cssText=`background:${vulnBg};border:1.5px solid ${vulnBorder};border-radius:14px;padding:12px 14px;margin:16px 0 6px;display:flex;align-items:center;gap:10px;`;
       const isL=pit.hand==="LHP";
-      const badge=mk("div",{width:"32px",height:"32px",borderRadius:"8px",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"700",fontSize:"11px",fontFamily:"'JetBrains Mono',monospace",background:isL?"rgba(74,127,168,.15)":"rgba(200,146,42,.15)",color:isL?"#4a7fa8":"#c8922a",flexShrink:"0"});
+      const handCol=isL?"#4a7fa8":"#c8922a";
+      const badge=mk("div",{width:"36px",height:"36px",borderRadius:"9px",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:"700",fontSize:"12px",fontFamily:"'JetBrains Mono',monospace",background:isL?"rgba(74,127,168,.18)":"rgba(200,146,42,.18)",color:handCol,flexShrink:"0",border:`1px solid ${handCol}44`});
       badge.textContent=pit.hand||"?";
       const phInfo=mk("div",{flex:"1"});
-      phInfo.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--text)">${pitName}</div>`;
+      phInfo.innerHTML=`
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+          <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--text)">${pitName}</span>
+          ${vulnTag?`<span style="font-family:'Rajdhani',sans-serif;font-weight:800;font-size:11px;letter-spacing:.06em;padding:2px 8px;border-radius:6px;background:${vulnColor}22;border:1px solid ${vulnColor}55;color:${vulnColor}">${vulnTag}</span>`:""}
+        </div>`;
       // Targeting summary
       const mustBats=group.filter(b=>effPct(b)>=.67);
       const avgBats=group.filter(b=>effPct(b)>=.50&&effPct(b)<.67);
@@ -1632,8 +1649,8 @@ function rSlate(c){
       if(lhbAvg)targets.push(`✅ LHB: ${lhbAvg}`);
       if(rhbAvg)targets.push(`✅ RHB: ${rhbAvg}`);
       if(targets.length){
-        const td=mk("div",{fontSize:"10px",color:"var(--muted)",marginTop:"2px",lineHeight:"1.6"});
-        td.textContent=targets.join(" · ");
+        const td=mk("div",{fontSize:"10px",color:"var(--muted)",marginTop:"4px",lineHeight:"1.7"});
+        td.textContent=targets.join("  ·  ");
         phInfo.appendChild(td);
       }
       ph.appendChild(badge);ph.appendChild(phInfo);
@@ -1664,26 +1681,36 @@ function mkSlateRow(b){
   const pitVuln=b.grade.B.pitcher;
   const bvp=b.grade.B.bvp;
   const platoon=b.grade.B.platoon;
+
+  // Pitcher vulnerability visual treatment
+  const vulnLbl=pitVuln?.l||"";
+  const isVeryHittable=vulnLbl==="Very Hittable";
+  const isHittable=vulnLbl==="Hittable";
+  const rowBorder=isVeryHittable?"border:1.5px solid rgba(61,158,96,.55);box-shadow:0 0 0 3px rgba(61,158,96,.07),inset 3px 0 0 #3d9e60;":
+                  isHittable?"border:1.5px solid rgba(125,184,96,.40);box-shadow:inset 3px 0 0 #7db860;":"";
+  const rowBg=isVeryHittable?"background:rgba(61,158,96,.06);":isHittable?"background:rgba(125,184,96,.04);":"";
+
   const row=el("div","slate-row");
+  row.style.cssText=(rowBorder?rowBorder+" ":"")+(rowBg||"");
   row.innerHTML=`
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
       <span class="slate-label ${sl.cls}">${sl.label}</span>
       <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:15px;color:var(--text);flex:1;min-width:0">${b.name}</span>
       <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${handCol}20;color:${handCol};flex-shrink:0">${b.hand}</span>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:5px;">
-      vs ${b.pitcherName||"Unknown Pitcher"}${b.pitcherHand?" ("+b.pitcherHand+")":""}
-      ${b.team?" · "+b.team:""}
-      ${!b.matched&&b.pitcherName?` <span style="color:var(--amber)">⚠️ unmatched</span>`:""}
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+      <span>vs <strong style="color:var(--text2)">${b.pitcherName||"Unknown"}</strong>${b.pitcherHand?" ("+b.pitcherHand+")":""}</span>
+      ${b.team?`<span style="color:var(--muted2)">· ${b.team}</span>`:""}
+      ${!b.matched&&b.pitcherName?`<span style="color:var(--amber)">⚠️ unmatched</span>`:""}
     </div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:6px;line-height:1.6;">
-      ${pitVuln&&pitVuln.l!=="No pitcher linked"?`Pitcher: ${pitVuln.l} · `:""}${platoon?`Platoon: ${platoon.l} · `:""}${bvp&&bvp.l!=="No data"?`BvP: ${bvp.l}`:""}
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+      ${vulnLbl&&vulnLbl!=="No pitcher linked"?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:${isVeryHittable?"rgba(61,158,96,.18)":isHittable?"rgba(125,184,96,.13)":"rgba(110,101,133,.1)"};border:1px solid ${isVeryHittable?"rgba(61,158,96,.4)":isHittable?"rgba(125,184,96,.3)":"rgba(110,101,133,.2)"};color:${isVeryHittable?"#52c278":isHittable?"#7db860":"var(--muted)"}">⚾ ${vulnLbl}</span>`:""}
+      ${platoon&&platoon.l&&platoon.l!=="Slight disadvantage"?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(192,130,160,.1);border:1px solid rgba(192,130,160,.25);color:#c084a0">⚔️ ${platoon.l}</span>`:""}
+      ${bvp&&bvp.l&&bvp.l!=="No data"&&bvp.l!=="Splits mode"?`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(74,127,168,.1);border:1px solid rgba(74,127,168,.25);color:#4a7fa8">📋 ${bvp.l}</span>`:""}
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);">
-        ${b.grade.total} raw pts · normalized
-      </div>
-      <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:${pct>=67?'#5cb870':pct>=50?'#e8a830':pct>=40?'#b89050':'#c0392b'}">${pct}%</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);">${b.grade.total} pts</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:${pct>=67?'#52c278':pct>=50?'#e8a830':pct>=40?'#b89050':'#c0392b'}">${pct}%</div>
     </div>`;
   return row;
 }
