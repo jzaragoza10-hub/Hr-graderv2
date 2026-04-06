@@ -897,14 +897,10 @@ function mkCard(bat){
       </div>
       ${bat.result&&bat.result!=="Pending"?`<div style="font-size:11px;font-weight:700;margin-top:3px;color:${bat.result.includes("Hit")?"var(--green2)":"var(--red2)"}">${bat.result}</div>`:""}
       <div class="qs-strip">
-        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.avgEV)>=92?'var(--green2)':parseFloat(bat.avgEV)>=88?'var(--amber)':'var(--red2)'}">${bat.avgEV||"—"}</div><div class="qs-lbl">EV</div></div>
+        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.avgEV)>=92?'var(--green2)':parseFloat(bat.avgEV)>=88?'var(--amber)':'var(--muted)'}">${bat.avgEV||"—"}</div><div class="qs-lbl">EV</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.barrelPct)>=13?'var(--green2)':parseFloat(bat.barrelPct)>=8?'var(--amber)':'var(--muted)'}">${bat.barrelPct!=null?bat.barrelPct+'%':"—"}</div><div class="qs-lbl">Barrel</div></div>
-        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.fbPct)>=38?'var(--green2)':parseFloat(bat.fbPct)>=28?'var(--amber)':'var(--red2)'}">${bat.fbPct!=null?bat.fbPct+'%':"—"}</div><div class="qs-lbl">FB%</div></div>
-        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.gbPct)<=32?'var(--green2)':parseFloat(bat.gbPct)<=44?'var(--amber)':'var(--red2)'}">${bat.gbPct!=null?bat.gbPct+'%':"—"}</div><div class="qs-lbl">GB%</div></div>
-        <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.pullPct)>=38?'var(--green2)':parseFloat(bat.pullPct)>=28?'var(--amber)':'var(--muted)'}">${bat.pullPct!=null?bat.pullPct+'%':"—"}</div><div class="qs-lbl">Pull</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.hrVsPitcher)>=2?'var(--green2)':parseFloat(bat.hrVsPitcher)>=1?'var(--amber)':'var(--muted)'}">${bat.hrVsPitcher!=null?bat.hrVsPitcher:'—'}</div><div class="qs-lbl">HR vs P</div></div>
-        ${bat.bpHRProb!=null?`<div class="qs"><div class="qs-val" style="color:${bat.bpHRProb>=.15?'var(--green2)':bat.bpHRProb>=.08?'var(--amber)':'var(--muted)'}">${Math.round(bat.bpHRProb*100)}%</div><div class="qs-lbl">BP Prob</div></div>`:""}
-        ${bat.odds?`<div class="qs"><div class="qs-val" style="color:var(--text2);font-size:10px">${bat.odds}</div><div class="qs-lbl">Odds</div></div>`:""}
+        ${bat.bpHRProb!=null?`<div class="qs"><div class="qs-val" style="color:${bat.bpHRProb>=.15?'var(--green2)':bat.bpHRProb>=.08?'var(--amber)':'var(--muted)'}">${Math.round(bat.bpHRProb*100)}%</div><div class="qs-lbl">BP Prob</div></div>`:`<div class="qs"><div class="qs-val" style="color:${parseFloat(bat.fbPct)>=38?'var(--green2)':parseFloat(bat.fbPct)>=28?'var(--amber)':'var(--muted)'}">${bat.fbPct!=null?bat.fbPct+'%':"—"}</div><div class="qs-lbl">FB%</div></div>`}
       </div>
       ${(()=>{const imp=impliedProb(bat.odds);if(!bat.odds||imp===null)return "";const e=edgeLabel(g.pct,imp);return `<div class="odds-strip"><span class="odds-pill">${Math.round(imp*100)}% impl.</span><span class="odds-pill">Grade ${Math.round(g.pct*100)}%</span><span class="odds-pill" style="color:${g.pct>=imp?'var(--green2)':'var(--red2)'}">${g.pct-imp>=0?"+":""}${Math.round((g.pct-imp)*100)}pts edge</span></div>`;})()}
     </div>
@@ -1143,14 +1139,10 @@ function rAdd(c){
     oddsPreview.innerHTML=`<span style="color:var(--text2)">${Math.round(prob*100)}% impl.</span>${e?` <span class="value-badge ${e.cls}">${e.lbl}</span>`:""}`;
   }
   oddsI.oninput=e=>{f.odds=e.target.value;updateOddsPreview();};
-  card.appendChild(g2(fld("American Odds",oddsI),fld("Edge Preview",oddsPreview)));
-  if(f.pitcherId)updateOddsPreview();
-
-  // ── BallparkPal ──
-  card.appendChild(sec("🅱️","BallparkPal","HR probability from BallparkPal — or import via CSV in Slate tab"));
-  const bpI=inp("number",f.bpHRProb,"0.085");bpI.placeholder="e.g. 0.085";bpI.step="0.001";
+  const bpI=inp("number",f.bpHRProb,"");bpI.placeholder="0.085";bpI.step="0.001";
   bpI.oninput=e=>f.bpHRProb=parseFloat(e.target.value)||"";
-  card.appendChild(g2(fld("HR Probability %",bpI)));
+  card.appendChild(g3(fld("American Odds",oddsI),fld("Edge Preview",oddsPreview),fld("BP HR Prob",bpI)));
+  if(f.pitcherId)updateOddsPreview();
 
   // Submit
   const sub=el("button","btn-primary","⚡ GRADE THIS MATCHUP");
@@ -1192,24 +1184,27 @@ function rPitchers(c){
       lbl.appendChild(inp);return lbl;
     }
 
-    // Season totals
-    btnRow.appendChild(csvBtn("📥 Import Pitcher CSV (Season Totals)",f=>importPitchersCSV(f)));
+    btnRow.appendChild(csvBtn("📥 Import Pitcher CSV",f=>importPitchersCSV(f)));
 
-    // Splits section header
-    const splitsHdr=mk("div",{fontSize:"10px",fontWeight:"700",color:"var(--muted)",letterSpacing:".08em",textTransform:"uppercase",marginTop:"6px",marginBottom:"2px",paddingLeft:"4px"});
-    splitsHdr.textContent="Handedness Splits — scores automatically when batter hand is known";
-    btnRow.appendChild(splitsHdr);
-
-    // 2 columns: LHB | RHB, 2 rows: 2026 | 2025
+    // Collapsible splits section
+    const splitsLoaded=S.pitchers.some(p=>p.splits&&Object.keys(p.splits).length>0);
+    const splitsToggle=el("button","btn-sm",`📊 Import Splits${splitsLoaded?" ✓":""}`);
+    splitsToggle.style.cssText="width:100%;padding:10px;font-size:13px;"+(splitsLoaded?"border-color:rgba(82,194,120,.4);color:var(--green2);":"");
+    const splitsPanel=mk("div",{display:"none",marginTop:"6px"});
+    const splitsHdr=mk("div",{fontSize:"10px",color:"var(--muted)",marginBottom:"7px",lineHeight:"1.5"});
+    splitsHdr.textContent="Scores vs LHB/RHB automatically when batter hand is known. Import once per day.";
+    splitsPanel.appendChild(splitsHdr);
     const splitGrid=mk("div",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px"});
-    [["vs LHB","LHB",2026],["vs RHB","RHB",2026],["vs LHB 2025","LHB",2025],["vs RHB 2025","RHB",2025]].forEach(([label,hand,year])=>{
-      const b=csvBtn(`📥 ${label} ${year===2026?"":""}`,f=>importSplitsCSV(f,hand,year));
-      // Show green dot if splits already loaded for any pitcher
+    [["vs LHB 2026","LHB",2026],["vs RHB 2026","RHB",2026],["vs LHB 2025","LHB",2025],["vs RHB 2025","RHB",2025]].forEach(([label,hand,year])=>{
+      const b=csvBtn(`📥 ${label}`,f=>importSplitsCSV(f,hand,year));
       const loaded=S.pitchers.some(p=>p.splits&&p.splits[hand+year]);
       if(loaded){b.style.borderColor="rgba(82,194,120,.4)";b.style.color="var(--green2)";}
       splitGrid.appendChild(b);
     });
-    btnRow.appendChild(splitGrid);
+    splitsPanel.appendChild(splitGrid);
+    splitsToggle.onclick=()=>{splitsPanel.style.display=splitsPanel.style.display==="none"?"block":"none";};
+    btnRow.appendChild(splitsToggle);
+    btnRow.appendChild(splitsPanel);
     c.appendChild(btnRow);
   }
 }
@@ -1789,12 +1784,20 @@ function rSlate(c){
     <div class="slate-stat"><div class="slate-num" style="color:#c0392b">${avoid}</div><div class="slate-lbl">Avoid</div></div>`;
   c.appendChild(bar);
 
-  // ── TOP TARGETS SECTION ──────────────────────────────────────────────────
+  // ── TOP TARGETS SECTION (collapsible) ───────────────────────────────────
   const topSec=el("div","card");
-  topSec.style.cssText="padding:16px 18px;margin-bottom:14px;";
-  const topHdr=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"16px",color:"var(--text)",marginBottom:"14px"});
-  topHdr.textContent="🎯 Top Targets by Pitcher";
-  topSec.appendChild(topHdr);
+  topSec.style.cssText="padding:0;margin-bottom:14px;overflow:hidden;";
+  const topToggleBtn=mk("div",{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",cursor:"pointer"});
+  const topHdrTxt=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"16px",color:"var(--text)"});
+  topHdrTxt.textContent="🎯 Top Targets by Pitcher";
+  const topChevron=mk("span",{fontSize:"12px",color:"var(--muted)"},"▾");
+  topToggleBtn.appendChild(topHdrTxt);topToggleBtn.appendChild(topChevron);
+  topSec.appendChild(topToggleBtn);
+  const topBody=mk("div",{padding:"0 18px 16px",display:"none"});
+  topToggleBtn.onclick=()=>{const open=topBody.style.display!=="none";topBody.style.display=open?"none":"block";topChevron.textContent=open?"▾":"▴";};
+  // expose topBody as container for pitcher blocks
+  const topHdr=topBody;
+  topSec.appendChild(topBody);
 
   const allPitchers=[...new Set(filtered.map(b=>b.pitcherName).filter(Boolean))];
   // Sort pitchers: most hittable first
@@ -1861,7 +1864,7 @@ function rSlate(c){
       }
     });
 
-    topSec.appendChild(pitBlock);
+    topBody.appendChild(pitBlock);
   });
 
   c.appendChild(topSec);
