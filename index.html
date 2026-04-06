@@ -1349,15 +1349,42 @@ function rWeights(c){
 
   // Backup / Restore
   const bk=el("div","card");
-  bk.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:4px">💾 Backup & Restore</div><div style="font-size:11px;color:var(--muted);margin-bottom:14px">Save all picks, pitchers and weights. Restore on any device.</div>`;
-  const expBtn=el("button","btn-secondary","⬇️ Export Backup");expBtn.onclick=exportData;bk.appendChild(expBtn);
-  const impWrap=mk("div",{marginTop:"10px"});
-  const impLbl=el("label","btn-secondary","⬆️ Restore Backup");
+  bk.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:4px">💾 Backup & Restore</div><div style="font-size:11px;color:var(--amber);margin-bottom:10px;line-height:1.5">⚠️ iOS clears app data after ~7 days of inactivity. Export a backup before stepping away.</div><div style="font-size:11px;color:var(--muted);margin-bottom:14px">Export saves picks + pitchers + weights. Restore on any device.</div>`;
+  const expBtn=el("button","btn-primary","⬇️ Export Backup");expBtn.onclick=exportData;expBtn.style.width='100%';bk.appendChild(expBtn);
+  const impWrap=mk("div",{marginTop:"8px"});
+  const impLbl=el("label","btn-secondary","⬆️ Restore from Backup");
   impLbl.style.cssText="display:block;cursor:pointer;text-align:center;padding:11px 0;border-radius:10px;";
   const impInp=document.createElement("input");impInp.type="file";impInp.accept=".json";impInp.style.display="none";
   impInp.onchange=e=>{if(e.target.files[0])importData(e.target.files[0]);};
   impLbl.appendChild(impInp);impWrap.appendChild(impLbl);bk.appendChild(impWrap);
   c.appendChild(bk);
+
+  // Daily Reset
+  const clCard=el("div","card");
+  clCard.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:4px">🗑️ Daily Reset</div><div style="font-size:11px;color:var(--muted);margin-bottom:14px">Clear data between days. Export a backup first if you want to keep records.</div>`;
+  const clGrid=mk("div",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"});
+  function mkClearBtn(label,action){
+    const b=el("button","btn-sm",label);
+    b.style.cssText="padding:10px 6px;font-size:12px;color:var(--amber);border-color:rgba(251,146,60,.3);";
+    b.onclick=action;clGrid.appendChild(b);
+  }
+  mkClearBtn("🏏 Clear Board",()=>{
+    const ov=clearConfirmModal("Clear all board picks?",()=>{S.batters=[];save();render();toast("Board cleared");});
+    document.body.appendChild(ov);
+  });
+  mkClearBtn("⚾ Clear Pitchers",()=>{
+    const ov=clearConfirmModal("Clear all pitchers?",()=>{S.pitchers=[];save();render();toast("Pitchers cleared");});
+    document.body.appendChild(ov);
+  });
+  mkClearBtn("📋 Clear Slate",()=>{
+    const ov=clearConfirmModal("Clear slate (BvP) data?",()=>{S.slate=[];save();render();toast("Slate cleared");});
+    document.body.appendChild(ov);
+  });
+  mkClearBtn("🔄 Clear All",()=>{
+    const ov=clearConfirmModal("Clear everything — board, pitchers and slate?",()=>{S.batters=[];S.pitchers=[];S.slate=[];save();render();toast("All data cleared");});
+    document.body.appendChild(ov);
+  });
+  clCard.appendChild(clGrid);c.appendChild(clCard);
 
   // Clear slate
   const clrCard=el("div","card");
@@ -1391,6 +1418,22 @@ function rWeights(c){
 }
 
 // ── BACKUP / RESTORE ──────────────────────────────────────────────────────
+function clearConfirmModal(msg,onConfirm){
+  const ov=el('div','');
+  Object.assign(ov.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.8)',zIndex:'300',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'});
+  const box=el('div','card');
+  box.style.cssText='max-width:320px;width:100%;padding:20px;text-align:center;';
+  box.innerHTML=`<div style="font-weight:700;font-size:15px;margin-bottom:10px">Are you sure?</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">${msg}<br>This cannot be undone.</div>`;
+  const yes=el('button','btn-sm','Yes, Clear');
+  yes.style.cssText='width:100%;padding:11px;color:var(--amber);border-color:rgba(251,146,60,.4);';
+  yes.onclick=()=>{document.body.removeChild(ov);onConfirm();};
+  const no=el('button','btn-secondary','Cancel');
+  no.style.cssText='width:100%;margin-top:8px;';
+  no.onclick=()=>document.body.removeChild(ov);
+  box.appendChild(yes);box.appendChild(no);ov.appendChild(box);
+  return ov;
+}
+
 function exportData(){
   const d={batters:S.batters,pitchers:S.pitchers,weights:W,exported:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});
@@ -1408,7 +1451,7 @@ function importData(file){
       const d=JSON.parse(e.target.result);
       if(d.batters)S.batters=d.batters;
       if(d.pitchers)S.pitchers=d.pitchers;
-      if(d.weights)W=d.weights;
+      if(d.weights){Object.keys(d.weights).forEach(k=>{if(W[k]!==undefined)W[k]=d.weights[k];});Object.keys(W_DEFAULT).forEach(k=>{if(!W[k])W[k]=JSON.parse(JSON.stringify(W_DEFAULT[k]));});}
       save();render();toast("✅ Data restored!");
     }catch(err){toast("⚠️ Invalid backup file");}
   };
