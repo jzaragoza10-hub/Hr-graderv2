@@ -1680,8 +1680,11 @@ function parseBpRows(rows){
 function triggerBpImport(){
   const fi=document.createElement('input');
   fi.type='file';fi.accept='.xlsx,.xls,.csv';
+  fi.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
   fi.onchange=e=>{
-    const file=e.target.files[0];if(!file)return;
+    const file=e.target.files[0];
+    document.body.removeChild(fi);
+    if(!file)return;
     const reader=new FileReader();
     const isXlsx=/\.xlsx?$/i.test(file.name);
     reader.onload=ev=>{
@@ -1702,6 +1705,7 @@ function triggerBpImport(){
     if(isXlsx)reader.readAsArrayBuffer(file);
     else reader.readAsText(file);
   };
+  document.body.appendChild(fi);
   fi.click();
 }
 
