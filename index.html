@@ -1684,22 +1684,28 @@ function triggerBpImport(){
   fi.onchange=e=>{
     const file=e.target.files[0];
     document.body.removeChild(fi);
-    if(!file)return;
+    if(!file){toast('⚠️ No file selected');return;}
+    toast('📂 Reading: '+file.name);
     const reader=new FileReader();
     const isXlsx=/\.xlsx?$/i.test(file.name);
+    reader.onerror=()=>toast('⚠️ File read error');
     reader.onload=ev=>{
+      toast('📊 Parsing file…');
       let players;
       if(isXlsx){
         try{
+          if(typeof XLSX==='undefined'){toast('⚠️ XLSX library not loaded — check internet connection');return;}
           const wb=XLSX.read(ev.target.result,{type:'array'});
           const ws=wb.Sheets[wb.SheetNames[0]];
           const rows=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
+          toast('🔢 '+rows.length+' rows found');
           players=parseBpRows(rows);
-        }catch(err){toast('⚠️ Failed to parse XLSX: '+err.message);return;}
+        }catch(err){toast('⚠️ XLSX error: '+err.message);return;}
       }else{
         players=parseBallparkPal(ev.target.result);
       }
-      if(!players.length){toast('⚠️ No players found');return;}
+      toast('👤 '+players.length+' players parsed');
+      if(!players.length){toast('⚠️ No players found — check FullName column');return;}
       processBpPlayers(players);
     };
     if(isXlsx)reader.readAsArrayBuffer(file);
