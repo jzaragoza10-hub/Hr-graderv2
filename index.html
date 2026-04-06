@@ -297,7 +297,7 @@ function load(){
   try{
     const b=localStorage.getItem("hrg2-batters");if(b)S.batters=JSON.parse(b);
     const p=localStorage.getItem("hrg2-pitchers");if(p)S.pitchers=JSON.parse(p);
-    const w=localStorage.getItem("hrg2-weights");if(w)W=JSON.parse(w);
+    const w=localStorage.getItem("hrg2-weights");if(w){const saved=JSON.parse(w);Object.keys(saved).forEach(k=>{if(W[k]!==undefined)W[k]=saved[k];});}
   }catch(e){}
 }
 function save(){
