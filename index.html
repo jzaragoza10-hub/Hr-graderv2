@@ -1844,8 +1844,14 @@ function buildBoardFromBP(players){
       return{...bat,id:Date.now()+Math.random(),grade,normalizedPct,result:'Pending'};
     }catch(e){console.error('BP score error for',p.name,e);return null;}
   }).filter(Boolean).sort((a,b)=>(b.normalizedPct||0)-(a.normalizedPct||0))
-    .filter((b,i,arr)=>arr.findIndex(x=>x.name===b.name)===i) // dedupe by name, keep highest-scoring
-    .slice(0,20);
+    .filter((b,i,arr)=>arr.findIndex(x=>x.name===b.name)===i) // dedupe by name
+    .reduce((acc,b)=>{
+      if(acc.length>=20)return acc;
+      const key=(b.pitcherName||b.pitcherHand||'unk').toLowerCase().trim();
+      const cnt=acc.filter(x=>(x.pitcherName||x.pitcherHand||'unk').toLowerCase().trim()===key).length;
+      if(cnt<3)acc.push(b);
+      return acc;
+    },[]);
 }
 
 function mkBpImportBtn(card){
