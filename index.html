@@ -1603,6 +1603,84 @@ function rSlate(c){
     <div class="slate-stat"><div class="slate-num" style="color:#c0392b">${avoid}</div><div class="slate-lbl">Avoid</div></div>`;
   c.appendChild(bar);
 
+  // ── TOP TARGETS SECTION ──────────────────────────────────────────────────
+  const topSec=el("div","card");
+  topSec.style.cssText="padding:16px 18px;margin-bottom:14px;";
+  const topHdr=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"16px",color:"var(--text)",marginBottom:"14px"});
+  topHdr.textContent="🎯 Top Targets by Pitcher";
+  topSec.appendChild(topHdr);
+
+  const allPitchers=[...new Set(filtered.map(b=>b.pitcherName).filter(Boolean))];
+  // Sort pitchers: most hittable first
+  const pitVulnScore=pn=>{
+    const sample=filtered.find(b=>b.pitcherName===pn);
+    return sample?.grade?.B?.pitcher?.s||0;
+  };
+  allPitchers.sort((a,b)=>pitVulnScore(b)-pitVulnScore(a));
+
+  allPitchers.forEach(pitName=>{
+    const group=[...filtered.filter(b=>b.pitcherName===pitName)].sort((a,b)=>effPct(b)-effPct(a));
+    const top3=group.slice(0,3);
+    if(top3.length===0)return;
+    const sampleVuln=top3[0]?.grade?.B?.pitcher;
+    const vulnLbl=sampleVuln?.l||"";
+    const isVH=vulnLbl==="Very Hittable",isH=vulnLbl==="Hittable",isT=vulnLbl==="Tough";
+    const vc=isVH?"#52c278":isH?"#7db860":isT?"#c0392b":"#6e6585";
+    const vb=isVH?"rgba(82,194,120,.12)":isH?"rgba(125,184,96,.07)":isT?"rgba(192,57,43,.06)":"var(--card2)";
+    const vbr=isVH?"rgba(82,194,120,.35)":isH?"rgba(125,184,96,.25)":isT?"rgba(192,57,43,.2)":"var(--border)";
+    const vtag=isVH?"🔥 VERY HITTABLE":isH?"⚡ HITTABLE":isT?"🔒 TOUGH":vulnLbl;
+
+    const pitBlock=mk("div",{marginBottom:"14px",padding:"12px 14px",borderRadius:"12px",background:vb,border:`1.5px solid ${vbr}`});
+
+    // Pitcher name + vuln tag
+    const pitRow=mk("div",{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px",flexWrap:"wrap"});
+    pitRow.innerHTML=`
+      <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--text)">${pitName}</span>
+      ${vtag?`<span style="font-family:'Rajdhani',sans-serif;font-weight:800;font-size:10px;letter-spacing:.06em;padding:2px 7px;border-radius:5px;background:${vc}20;border:1px solid ${vc}44;color:${vc}">${vtag}</span>`:""}`;
+    pitBlock.appendChild(pitRow);
+
+    // Top 3 batter rows
+    top3.forEach((b,i)=>{
+      const ep=effPct(b);
+      const pct=Math.round(ep*100);
+      const handCol=b.hand==="LHB"?"#4a7fa8":b.hand==="RHB"?"#c8922a":"#5cb870";
+      const pctCol=pct>=67?"#52c278":pct>=50?"#e8a830":pct>=40?"#b89050":"#c0392b";
+      const G=b.grade.B;
+      const hr=parseFloat(b.hrVsPitcher),ab=parseFloat(b.abVsPitcher);
+      const platLbl=G.platoon?.l||"";
+
+      // One-line advantage summary
+      const adv=[];
+      if(!isNaN(hr)&&hr>=1)adv.push(`<span style="color:#52c278;font-weight:700">${hr} HR in ${ab} ABs</span>`);
+      if(platLbl==="Elite Edge"||platLbl==="Clear Edge")adv.push(`<span style="color:#52c278;font-weight:700">Platoon edge</span>`);
+      if(G.bvp?.l==="Owns pitcher")adv.push(`<span style="color:#52c278;font-weight:700">Owns pitcher</span>`);
+      const slg=parseFloat(b.slgVsPitcher),iso=parseFloat(b.iso);
+      if(isNaN(hr)||hr===0){
+        if(!isNaN(slg)&&slg>=.500)adv.push(`<span style="color:#e8a830;font-weight:700">SLG ${b.slgVsPitcher}</span>`);
+        if(!isNaN(iso)&&iso>=.200)adv.push(`<span style="color:#e8a830;font-weight:700">ISO ${b.iso}</span>`);
+      }
+
+      const batRow=mk("div",{display:"flex",alignItems:"center",gap:"8px",padding:"7px 0",borderTop:i>0?"1px solid var(--border)":"none"});
+      batRow.innerHTML=`
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);width:14px;flex-shrink:0">${i+1}</span>
+        <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:14px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.name}</span>
+        <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;background:${handCol}20;color:${handCol};flex-shrink:0">${b.hand}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:${pctCol};flex-shrink:0">${pct}%</span>`;
+      pitBlock.appendChild(batRow);
+
+      if(adv.length){
+        const advRow=mk("div",{fontSize:"11px",color:"var(--muted)",paddingLeft:"22px",marginTop:"-2px",marginBottom:"4px",lineHeight:"1.5"});
+        advRow.innerHTML=adv.join(" · ");
+        pitBlock.appendChild(advRow);
+      }
+    });
+
+    topSec.appendChild(pitBlock);
+  });
+
+  c.appendChild(topSec);
+
+  // ── DETAILED ROWS ─────────────────────────────────────────────────────────
   // Group by pitcher if no pitcher filter
   const sorted=[...filtered].sort((a,b)=>effPct(b)-effPct(a));
 
