@@ -283,6 +283,7 @@ let W={
   park:      {label:"Park Factor",         max:8,  color:"#4a7fa8"},
   weather:   {label:"Weather",             max:6,  color:"#60a0c0"},
   pitchBoost:{label:"Pitch Boost",         max:8,  color:"#8888e0"},
+  bpBoost:   {label:"BallparkPal Prob",    max:10, color:"#60c0ff"},
 };
 const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
@@ -463,6 +464,13 @@ function score(bat,pit){
     if(phr!==null&&phr>=2)r=Math.min(r+.22,1);
     B.pitchBoost={s:pts(r,W.pitchBoost.max),l:r>=.80?"Strong boost":r>=.50?"Mild boost":"Minimal"};
   }else B.pitchBoost={s:0,l:"N/A"};
+
+  // BallparkPal HR probability (decimal: 0.08 = 8%)
+  const bp=n(bat.bpHRProb);
+  B.bpBoost=bp===null?{s:0,l:"—"}:{
+    s:pts(bp>=.20?1:bp>=.15?.80:bp>=.10?.58:bp>=.07?.38:bp>=.04?.18:.05,W.bpBoost.max),
+    l:bp>=.18?"Elite":bp>=.12?"Strong":bp>=.07?"Avg":"Low"
+  };
 
   const total=Object.values(B).reduce((a,v)=>a+v.s,0);
   const maxTotal=Object.values(W).reduce((a,w)=>a+w.max,0);
@@ -895,6 +903,7 @@ function mkCard(bat){
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.gbPct)<=32?'var(--green2)':parseFloat(bat.gbPct)<=44?'var(--amber)':'var(--red2)'}">${bat.gbPct!=null?bat.gbPct+'%':"—"}</div><div class="qs-lbl">GB%</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.pullPct)>=38?'var(--green2)':parseFloat(bat.pullPct)>=28?'var(--amber)':'var(--muted)'}">${bat.pullPct!=null?bat.pullPct+'%':"—"}</div><div class="qs-lbl">Pull</div></div>
         <div class="qs"><div class="qs-val" style="color:${parseFloat(bat.hrVsPitcher)>=2?'var(--green2)':parseFloat(bat.hrVsPitcher)>=1?'var(--amber)':'var(--muted)'}">${bat.hrVsPitcher!=null?bat.hrVsPitcher:'—'}</div><div class="qs-lbl">HR vs P</div></div>
+        ${bat.bpHRProb!=null?`<div class="qs"><div class="qs-val" style="color:${bat.bpHRProb>=.15?'var(--green2)':bat.bpHRProb>=.08?'var(--amber)':'var(--muted)'}">${Math.round(bat.bpHRProb*100)}%</div><div class="qs-lbl">BP Prob</div></div>`:""}
         ${bat.odds?`<div class="qs"><div class="qs-val" style="color:var(--text2);font-size:10px">${bat.odds}</div><div class="qs-lbl">Odds</div></div>`:""}
       </div>
       ${(()=>{const imp=impliedProb(bat.odds);if(!bat.odds||imp===null)return "";const e=edgeLabel(g.pct,imp);return `<div class="odds-strip"><span class="odds-pill">${Math.round(imp*100)}% impl.</span><span class="odds-pill">Grade ${Math.round(g.pct*100)}%</span><span class="odds-pill" style="color:${g.pct>=imp?'var(--green2)':'var(--red2)'}">${g.pct-imp>=0?"+":""}${Math.round((g.pct-imp)*100)}pts edge</span></div>`;})()}
@@ -1007,6 +1016,9 @@ function rAdd(c){
       render();
     }));
   }
+
+  // ── BallparkPal import ──
+  mkBpImportBtn(card);
 
   // ── Identity ──
   card.appendChild(sec("🧢","Batter Info"));
@@ -1133,6 +1145,12 @@ function rAdd(c){
   oddsI.oninput=e=>{f.odds=e.target.value;updateOddsPreview();};
   card.appendChild(g2(fld("American Odds",oddsI),fld("Edge Preview",oddsPreview)));
   if(f.pitcherId)updateOddsPreview();
+
+  // ── BallparkPal ──
+  card.appendChild(sec("🅱️","BallparkPal","HR probability from BallparkPal — or import via CSV in Slate tab"));
+  const bpI=inp("number",f.bpHRProb,"0.085");bpI.placeholder="e.g. 0.085";bpI.step="0.001";
+  bpI.oninput=e=>f.bpHRProb=parseFloat(e.target.value)||"";
+  card.appendChild(g2(fld("HR Probability %",bpI)));
 
   // Submit
   const sub=el("button","btn-primary","⚡ GRADE THIS MATCHUP");
@@ -1609,6 +1627,82 @@ function importBattersCSV(file){
     }catch(err){alert("Batter CSV error: "+(err.message||String(err)));}
   };
   r.readAsText(file);
+}
+
+// ── BALLPARKPAL ───────────────────────────────────────────────────────────
+function parseBallparkPal(csvText){
+  const lines=csvText.trim().split('\n');
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=line.split(',').map(v=>v.trim().replace(/"/g,''));
+    const row={};
+    headers.forEach((h,i)=>row[h]=vals[i]||'');
+    const handMap={L:'LHB',R:'RHB',S:'Switch'};
+    return{
+      name:       row['FullName']||'',
+      team:       row['Team']||'',
+      opponent:   row['Opponent']||'',
+      lineupSpot: row['BattingPosition']||'',
+      hand:       handMap[row['BatterStand']]||'',
+      bpHRProb:   parseFloat(row['HomeRunProbability'])||null,
+      bpHitProb:  parseFloat(row['HitProbability'])||null,
+      bpProjHR:   parseFloat(row['HomeRuns'])||null,
+      bpPointsDK: parseFloat(row['PointsDK'])||null,
+      bpPointsFD: parseFloat(row['PointsFD'])||null,
+    };
+  }).filter(b=>b.name);
+}
+
+function mkBpImportBtn(card){
+  const impBtn=el('button','btn-secondary','🅱️ Import BallparkPal CSV');
+  impBtn.type='button';impBtn.style.marginBottom='14px';
+  impBtn.onclick=()=>{
+    const fi=document.createElement('input');
+    fi.type='file';fi.accept='.csv';
+    fi.onchange=e=>{
+      const file=e.target.files[0];if(!file)return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        const players=parseBallparkPal(ev.target.result);
+        if(!players.length){toast('⚠️ No players found in CSV');return;}
+        // Also update any matching slate batters with bpHRProb
+        players.forEach(p=>{
+          const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
+          if(sb){sb.bpHRProb=p.bpHRProb;const pit=S.pitchers.find(x=>String(x.id)===String(sb.pitcherId));sb.grade=score(sb,pit||null);const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);const fm=Object.entries(sb.grade.B).reduce((s,[k,v])=>NO_DATA.has(v.l)?s:s+(W[k]?.max||0),0);sb.normalizedPct=fm>0?Math.min(sb.grade.total/fm,1):0;}
+        });
+        // Show picker modal
+        const overlay=el('div','');
+        Object.assign(overlay.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.75)',zIndex:'200',overflowY:'auto',padding:'20px 14px'});
+        const box=el('div','card');
+        box.style.cssText='max-width:520px;margin:0 auto;';
+        box.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;margin-bottom:12px">Select a Batter</div>`;
+        const sorted=[...players].sort((a,b)=>(b.bpHRProb||0)-(a.bpHRProb||0));
+        sorted.forEach(p=>{
+          const row=el('div','');
+          Object.assign(row.style,{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',marginBottom:'6px',background:'var(--card2)',borderRadius:'10px',border:'1px solid var(--border)',cursor:'pointer'});
+          const pct=p.bpHRProb?Math.round(p.bpHRProb*100)+'%':'—';
+          const col=p.bpHRProb>=.15?'var(--green2)':p.bpHRProb>=.08?'var(--amber)':'var(--muted)';
+          row.innerHTML=`<div><div style="font-weight:700;font-size:14px">${p.name}</div><div style="font-size:11px;color:var(--muted)">${p.team} vs ${p.opponent}${p.lineupSpot?' · Spot '+p.lineupSpot:''}${p.hand?' · '+p.hand:''}</div></div><div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:${col};font-size:15px">${pct}</div>`;
+          row.onclick=()=>{
+            Object.assign(BF,{...p,bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10)});
+            document.body.removeChild(overlay);
+            S.tab='add';render();
+            toast('✅ '+p.name+' loaded');
+          };
+          box.appendChild(row);
+        });
+        const cancel=el('button','btn-secondary','Cancel');
+        cancel.style.marginTop='10px';
+        cancel.onclick=()=>document.body.removeChild(overlay);
+        box.appendChild(cancel);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+      };
+      reader.readAsText(file);
+    };
+    fi.click();
+  };
+  card.appendChild(impBtn);
 }
 
 // ── SLATE ANALYSIS ────────────────────────────────────────────────────────
