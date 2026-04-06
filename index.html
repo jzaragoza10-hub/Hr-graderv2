@@ -1684,28 +1684,24 @@ function triggerBpImport(){
   fi.onchange=e=>{
     const file=e.target.files[0];
     document.body.removeChild(fi);
-    if(!file){toast('⚠️ No file selected');return;}
-    toast('📂 Reading: '+file.name);
+    if(!file)return;
     const reader=new FileReader();
     const isXlsx=/\.xlsx?$/i.test(file.name);
-    reader.onerror=()=>toast('⚠️ File read error');
+    reader.onerror=()=>toast('⚠️ File read error',5000);
     reader.onload=ev=>{
-      toast('📊 Parsing file…');
       let players;
       if(isXlsx){
         try{
-          if(typeof XLSX==='undefined'){toast('⚠️ XLSX library not loaded — check internet connection');return;}
+          if(typeof XLSX==='undefined'){toast('⚠️ XLSX library not loaded — check internet',5000);return;}
           const wb=XLSX.read(ev.target.result,{type:'array'});
           const ws=wb.Sheets[wb.SheetNames[0]];
           const rows=XLSX.utils.sheet_to_json(ws,{raw:false,defval:''});
-          toast('🔢 '+rows.length+' rows found');
           players=parseBpRows(rows);
-        }catch(err){toast('⚠️ XLSX error: '+err.message);return;}
+        }catch(err){toast('⚠️ XLSX error: '+err.message,6000);return;}
       }else{
         players=parseBallparkPal(ev.target.result);
       }
-      toast('👤 '+players.length+' players parsed');
-      if(!players.length){toast('⚠️ No players found — check FullName column');return;}
+      if(!players.length){toast('⚠️ No players found — check FullName column',5000);return;}
       processBpPlayers(players);
     };
     if(isXlsx)reader.readAsArrayBuffer(file);
@@ -1716,9 +1712,9 @@ function triggerBpImport(){
 }
 
 function processBpPlayers(players){
+  const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
+  let top20;
   try{
-    toast('⚙️ Building board…');
-    const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
     players.forEach(p=>{
       const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
       if(sb){
@@ -1729,34 +1725,36 @@ function processBpPlayers(players){
         sb.normalizedPct=fm>0?Math.min(sb.grade.total/fm,1):0;
       }
     });
-    const top20=buildBoardFromBP(players);
-    toast('🏆 Top '+top20.length+' graded — loading board…');
-    const withPit=top20.filter(b=>b.pitcherId||b.pitcherName).length;
-    const withBvp=top20.filter(b=>b.bvpSource==='Direct BvP (vs this pitcher)').length;
-    const doLoad=()=>{
-      S.batters=top20;save();S.tab='board';render();
-      toast(`✅ Board loaded: ${top20.length} batters · ${withBvp} with BvP · ${withPit} with pitcher data`);
-    };
-    if(S.batters.length>0){
-      const ov=el('div','');
-      Object.assign(ov.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.8)',zIndex:'300',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'});
-      const box=el('div','card');
-      box.style.cssText='max-width:340px;width:100%;padding:20px;text-align:center;';
-      box.innerHTML=`<div style="font-weight:700;font-size:16px;margin-bottom:8px">Replace Board?</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">Load top ${top20.length} from BallparkPal?<br>Current ${S.batters.length} picks will be replaced.</div>`;
-      const yes=el('button','btn-primary','✅ Yes, Load Board');
-      yes.style.width='100%';
-      yes.onclick=()=>{document.body.removeChild(ov);doLoad();};
-      const no=el('button','btn-secondary','Cancel');
-      no.style.cssText='width:100%;margin-top:8px;';
-      no.onclick=()=>document.body.removeChild(ov);
-      box.appendChild(yes);box.appendChild(no);
-      ov.appendChild(box);document.body.appendChild(ov);
-    }else{
-      doLoad();
-    }
+    top20=buildBoardFromBP(players);
   }catch(err){
-    toast('❌ Error: '+err.message);
-    console.error('processBpPlayers error:',err);
+    toast('❌ Build error: '+err.message,8000);
+    console.error(err);return;
+  }
+  if(!top20||!top20.length){toast('⚠️ No batters could be graded',5000);return;}
+  const withPit=top20.filter(b=>b.pitcherId||b.pitcherName).length;
+  const withBvp=top20.filter(b=>b.bvpSource==='Direct BvP (vs this pitcher)').length;
+  const doLoad=()=>{
+    try{
+      S.batters=top20;save();S.tab='board';render();
+      toast(`✅ Board: ${top20.length} batters loaded`,5000);
+    }catch(e){toast('❌ Render error: '+e.message,8000);console.error(e);}
+  };
+  if(S.batters.length>0){
+    const ov=el('div','');
+    Object.assign(ov.style,{position:'fixed',inset:'0',background:'rgba(0,0,0,.8)',zIndex:'300',display:'flex',alignItems:'center',justifyContent:'center',padding:'20px'});
+    const box=el('div','card');
+    box.style.cssText='max-width:340px;width:100%;padding:20px;text-align:center;';
+    box.innerHTML=`<div style="font-weight:700;font-size:16px;margin-bottom:8px">Replace Board?</div><div style="font-size:13px;color:var(--muted);margin-bottom:18px">Load top ${top20.length} from BallparkPal?<br>Current ${S.batters.length} picks will be replaced.</div>`;
+    const yes=el('button','btn-primary','✅ Yes, Load Board');
+    yes.style.width='100%';
+    yes.onclick=()=>{document.body.removeChild(ov);doLoad();};
+    const no=el('button','btn-secondary','Cancel');
+    no.style.cssText='width:100%;margin-top:8px;';
+    no.onclick=()=>document.body.removeChild(ov);
+    box.appendChild(yes);box.appendChild(no);
+    ov.appendChild(box);document.body.appendChild(ov);
+  }else{
+    doLoad();
   }
 }
 
@@ -1764,35 +1762,35 @@ function buildBoardFromBP(players){
   const today=new Date().toISOString().slice(0,10);
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
   return players.map(p=>{
-    // Find matching slate batter for BvP stats
-    const sl=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
-    // Find pitcher: prefer slate link, else match pitcher by team vs opponent
-    let pit=null;
-    if(sl?.pitcherId) pit=S.pitchers.find(x=>String(x.id)===String(sl.pitcherId));
-    if(!pit&&p.opponent) pit=S.pitchers.find(x=>x.team&&x.team.toUpperCase().replace(/\s/g,'')===p.opponent.toUpperCase().replace(/\s/g,''));
-    const bat={
-      name:p.name, team:p.team||sl?.team||'',
-      hand:p.hand||sl?.hand||'RHB',
-      lineupSpot:p.lineupSpot||sl?.lineupSpot||'',
-      pitcherId:pit?.id||sl?.pitcherId||'',
-      pitcherName:pit?.name||sl?.pitcherName||p.opponent||'',
-      pitcherHand:pit?.hand||sl?.pitcherHand||'',
-      avgEV:sl?.avgEV||'', barrelPct:sl?.barrelPct||'',
-      hrFbPct:sl?.hrFbPct||'', hardHitPct:sl?.hardHitPct||'',
-      fbPct:sl?.fbPct||'', pullPct:sl?.pullPct||'',
-      iso:sl?.iso||'', abVsPitcher:sl?.abVsPitcher||'',
-      hrVsPitcher:sl?.hrVsPitcher||'', slgVsPitcher:sl?.slgVsPitcher||'',
-      avgVsPitcher:sl?.avgVsPitcher||'',
-      bvpSource:sl?'Direct BvP (vs this pitcher)':'BallparkPal',
-      bpHRProb:p.bpHRProb, bpHitProb:p.bpHitProb,
-      bpProjHR:p.bpProjHR, bpPointsDK:p.bpPointsDK, bpPointsFD:p.bpPointsFD,
-      park:'', windDir:'Calm / Dome', pitchType:'None / Skip', odds:'', date:today,
-    };
-    const grade=score(bat,pit||null);
-    const filledMax=Object.entries(grade.B).reduce((s,[k,v])=>NO_DATA.has(v.l)?s:s+(W[k]?.max||0),0);
-    const normalizedPct=filledMax>0?Math.min(grade.total/filledMax,1):0;
-    return{...bat,id:Date.now()+Math.random(),grade,normalizedPct,result:'Pending'};
-  }).sort((a,b)=>(b.normalizedPct||0)-(a.normalizedPct||0)).slice(0,20);
+    try{
+      const sl=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
+      let pit=null;
+      if(sl?.pitcherId) pit=S.pitchers.find(x=>String(x.id)===String(sl.pitcherId));
+      if(!pit&&p.opponent) pit=S.pitchers.find(x=>x.team&&x.team.toUpperCase().replace(/\s/g,'')===p.opponent.toUpperCase().replace(/\s/g,''));
+      const bat={
+        name:p.name, team:p.team||sl?.team||'',
+        hand:p.hand||sl?.hand||'RHB',
+        lineupSpot:p.lineupSpot||sl?.lineupSpot||'',
+        pitcherId:pit?.id||sl?.pitcherId||'',
+        pitcherName:pit?.name||sl?.pitcherName||p.opponent||'',
+        pitcherHand:pit?.hand||sl?.pitcherHand||'',
+        avgEV:sl?.avgEV||'', barrelPct:sl?.barrelPct||'',
+        hrFbPct:sl?.hrFbPct||'', hardHitPct:sl?.hardHitPct||'',
+        fbPct:sl?.fbPct||'', pullPct:sl?.pullPct||'',
+        iso:sl?.iso||'', abVsPitcher:sl?.abVsPitcher||'',
+        hrVsPitcher:sl?.hrVsPitcher||'', slgVsPitcher:sl?.slgVsPitcher||'',
+        avgVsPitcher:sl?.avgVsPitcher||'',
+        bvpSource:sl?'Direct BvP (vs this pitcher)':'BallparkPal',
+        bpHRProb:p.bpHRProb, bpHitProb:p.bpHitProb,
+        bpProjHR:p.bpProjHR, bpPointsDK:p.bpPointsDK, bpPointsFD:p.bpPointsFD,
+        park:'', windDir:'Calm / Dome', pitchType:'None / Skip', odds:'', date:today,
+      };
+      const grade=score(bat,pit||null);
+      const filledMax=Object.entries(grade.B).reduce((s,[k,v])=>NO_DATA.has(v.l)?s:s+(W[k]?.max||0),0);
+      const normalizedPct=filledMax>0?Math.min(grade.total/filledMax,1):0;
+      return{...bat,id:Date.now()+Math.random(),grade,normalizedPct,result:'Pending'};
+    }catch(e){console.error('BP score error for',p.name,e);return null;}
+  }).filter(Boolean).sort((a,b)=>(b.normalizedPct||0)-(a.normalizedPct||0)).slice(0,20);
 }
 
 function mkBpImportBtn(card){
