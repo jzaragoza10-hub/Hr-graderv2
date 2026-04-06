@@ -1376,13 +1376,16 @@ function importPitchersCSV(file){
     try{
       const {rows,headers}=parseCSV(e.target.result);
       if(rows.length===0){alert("CSV appears empty.\nHeaders: "+(headers.join(", ")||"none"));return;}
+      // Always show headers so user can report them if needed
+      const headerList=headers.join(", ");
       let added=0,skipped=0;
-      // Find which column holds pitcher names (first text column as fallback)
-      const nameCol=headers.find(h=>["PITCHER","NAME","PLAYER","P","PITCHERNAME"].includes(h))||headers[0];
       rows.forEach(row=>{
-        // Try named columns first, then fallback to detected name column, then first column
-        const name=colVal(row,"PITCHER","NAME","PLAYER","P","PITCHERNAME")||row[nameCol]||Object.values(row)[0]||"";
-        if(!name||name.match(/^\d/))return; // skip empty or number-only rows
+        // Try many column name variants for pitcher name
+        const name=colVal(row,"PITCHER","NAME","PLAYER","PITCHERNAME","PITCHER NAME","FULL NAME","P NAME")||"";
+        // Must look like a real name: contains a letter, has a space (First Last), skip header-like values
+        if(!name||!/[a-zA-Z]/.test(name)||name.toUpperCase()===name&&name.split(" ").length<2)return;
+        // Skip duplicates
+        if(S.pitchers.find(p=>p.name.toLowerCase().trim()===name.toLowerCase().trim())){skipped++;return;}
         // Skip duplicates
         if(S.pitchers.find(p=>p.name.toLowerCase().trim()===name.toLowerCase().trim())){skipped++;return;}
         const pit={
@@ -1406,7 +1409,7 @@ function importPitchersCSV(file){
       });
       save();render();
       if(added===0){
-        alert(`No pitchers imported.\n\nHeaders in your CSV:\n${headers.join(", ")}\n\nUsed "${nameCol}" as name column.\n${skipped?skipped+" rows skipped as duplicates.":"Send this message to Claude to fix the column mapping."}`);
+        alert(`No pitchers imported.\n\nYour CSV headers:\n${headerList}\n\n${skipped?skipped+" rows skipped as duplicates.\n\n":""}Send the header list above to Claude to fix the column mapping.`);
 
       }else{
         toast(`✅ ${added} pitcher${added!==1?"s":""} imported${skipped?` (${skipped} dupes skipped)`:""}`);
