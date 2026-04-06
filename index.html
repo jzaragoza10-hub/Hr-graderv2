@@ -1678,64 +1678,80 @@ function genMatchupInsights(b){
   const pit=S.pitchers.find(p=>String(p.id)===String(b.pitcherId));
   const G=b.grade.B;
   const n=v=>{const x=parseFloat(v);return isNaN(x)?null:x;};
-  const pct=v=>v!=null?Math.round(v*100)+"%" :null;
 
-  // ── Pitcher vulnerability — always show raw stats ──
-  const vulnLbl=G.pitcher?.l||"";
-  if(pit&&(vulnLbl==="Very Hittable"||vulnLbl==="Hittable"||vulnLbl==="Avg"||vulnLbl==="Tough")){
-    const hr9=n(pit.hr9),bar=n(pit.barrelAllowed),hh=n(pit.hardHitAllowed),iso=n(pit.isoAllowed);
-    const stats=[];
-    if(hr9!=null)stats.push(`HR/9 ${pit.hr9}`);
-    if(bar!=null)stats.push(`Barrel% ${pit.barrelAllowed}%`);
-    if(hh!=null)stats.push(`Hard Hit% ${pit.hardHitAllowed}%`);
-    if(iso!=null)stats.push(`ISO allowed ${pit.isoAllowed}`);
-    const icon=vulnLbl==="Very Hittable"?"🔥":vulnLbl==="Hittable"?"⚡":vulnLbl==="Tough"?"🔒":"⚾";
-    points.push({icon,text:`${pit.name}: ${stats.length?stats.join(" · "):"no stats"} — ${vulnLbl}`});
+  // Color-coded stat chip: green if good, amber if ok, muted if neutral
+  function chip(label,val,great,good,higherBetter=true){
+    if(val==null)return"";
+    const v=parseFloat(val);
+    const hot=higherBetter?v>=great:v<=great;
+    const warm=higherBetter?v>=good:v<=good;
+    const col=hot?"#52c278":warm?"#e8a830":"var(--muted)";
+    const bg=hot?"rgba(82,194,120,.15)":warm?"rgba(232,168,48,.1)":"rgba(110,101,133,.08)";
+    const border=hot?"rgba(82,194,120,.4)":warm?"rgba(232,168,48,.25)":"rgba(110,101,133,.18)";
+    const weight=hot?"800":"700";
+    return `<span style="display:inline-block;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:${weight};font-family:'JetBrains Mono',monospace;background:${bg};border:1px solid ${border};color:${col};margin:1px 2px;">${label} ${val}</span>`;
   }
 
-  // ── BvP history — always show actual numbers ──
+  // ── Pitcher vulnerability ──
+  const vulnLbl=G.pitcher?.l||"";
+  if(pit&&vulnLbl){
+    const hr9=n(pit.hr9),bar=n(pit.barrelAllowed),hh=n(pit.hardHitAllowed),iso=n(pit.isoAllowed);
+    const chips=[
+      chip("HR/9",pit.hr9,1.4,1.0),
+      chip("Barrel%",pit.barrelAllowed,10,7),
+      chip("Hard Hit%",pit.hardHitAllowed,42,36),
+      chip("ISO allow",pit.isoAllowed,0.20,0.15),
+    ].filter(Boolean).join(" ");
+    const icon=vulnLbl==="Very Hittable"?"🔥":vulnLbl==="Hittable"?"⚡":vulnLbl==="Tough"?"🔒":"⚾";
+    const vulnCol=vulnLbl==="Very Hittable"?"#52c278":vulnLbl==="Hittable"?"#e8a830":vulnLbl==="Tough"?"#c0392b":"var(--muted)";
+    points.push({icon,html:`<span style="color:var(--text2)">${pit.name}</span> <span style="color:${vulnCol};font-weight:700">${vulnLbl}</span><br><span style="line-height:2">${chips||"<span style='color:var(--muted);font-size:11px'>no stats — add via pitcher form</span>"}</span>`});
+  }
+
+  // ── BvP history ──
   const pH=b.pitcherHand,bH=b.hand;
   const hr=n(b.hrVsPitcher),ab=n(b.abVsPitcher),slg=n(b.slgVsPitcher),avg=n(b.avgVsPitcher),iso=n(b.iso);
   if(ab!=null&&ab>0){
-    const stats=[];
-    if(hr!=null)stats.push(`${hr} HR`);
-    if(avg!=null)stats.push(`AVG ${b.avgVsPitcher}`);
-    if(slg!=null)stats.push(`SLG ${b.slgVsPitcher}`);
-    if(iso!=null)stats.push(`ISO ${b.iso}`);
-    const tag=hr>=3?"Owns this pitcher":hr>=2?"Strong history":hr>=1?"Has gone deep":avg!=null?"No HRs but productive":"Limited sample";
-    points.push({icon:hr>=2?"💣":hr>=1?"📈":"📋",text:`vs ${b.pitcherName||"pitcher"} in ${ab} ABs: ${stats.join(" · ")} — ${tag}`});
+    const chips=[
+      hr!=null?chip("HR",b.hrVsPitcher,2,1):"",
+      chip("AVG",b.avgVsPitcher,0.300,0.250),
+      chip("SLG",b.slgVsPitcher,0.550,0.430),
+      chip("ISO",b.iso,0.220,0.160),
+    ].filter(Boolean).join(" ");
+    const tag=hr>=3?"Owns this pitcher":hr>=2?"Strong history":hr>=1?"Has gone deep":avg!=null&&avg>=.270?"Productive — no HR yet":"Limited history";
+    const tagCol=hr>=2?"#52c278":hr>=1?"#e8a830":"var(--muted)";
+    points.push({icon:hr>=2?"💣":hr>=1?"📈":"📋",html:`<span style="color:var(--text2)">vs ${b.pitcherName||"pitcher"} in <strong>${ab} ABs</strong></span> <span style="color:${tagCol};font-weight:700">${tag}</span><br><span style="line-height:2">${chips}</span>`});
   }else if(iso!=null){
-    // Splits mode — show ISO vs handedness
-    const stats=[`ISO ${b.iso}`];
-    if(slg!=null)stats.push(`SLG ${b.slgVsPitcher}`);
-    points.push({icon:"📊",text:`vs ${pH||"?"} splits: ${stats.join(" · ")}`});
+    const chips=[
+      chip("ISO",b.iso,0.220,0.160),
+      chip("SLG",b.slgVsPitcher,0.550,0.430),
+    ].filter(Boolean).join(" ");
+    points.push({icon:"📊",html:`<span style="color:var(--text2)">vs ${pH||"?"} splits</span><br><span style="line-height:2">${chips}</span>`});
   }
 
   // ── Platoon edge ──
   const platLbl=G.platoon?.l||"";
   if(platLbl==="Elite Edge"||platLbl==="Clear Edge"){
-    const weakness=pit?.platoonWeakness&&pit.platoonWeakness!=="None / Unknown"?` · ${pit.name} documented weak vs ${bH}`:"";
-    points.push({icon:"⚔️",text:`Platoon edge: ${bH} vs ${pH}${weakness}`});
+    const weakness=pit?.platoonWeakness&&pit.platoonWeakness!=="None / Unknown"?`<span style="color:#52c278;font-weight:700"> · ${pit.name} documented weak vs ${bH}</span>`:"";
+    points.push({icon:"⚔️",html:`<span style="color:#52c278;font-weight:700">Platoon edge</span> <span style="color:var(--text2)">${bH} vs ${pH}</span>${weakness}`});
   }else if(platLbl==="Slight disadvantage"){
-    points.push({icon:"⚠️",text:`Same-hand matchup — ${bH} vs ${pH}, platoon works against`});
+    points.push({icon:"⚠️",html:`<span style="color:#c0392b;font-weight:700">Same-hand matchup</span> <span style="color:var(--muted)">${bH} vs ${pH} — platoon works against</span>`});
   }
 
-  // ── Pitcher platoon weakness (if not already mentioned) ──
-  if(pit?.platoonWeakness&&pit.platoonWeakness!=="None / Unknown"&&!points.some(p=>p.text.includes("documented"))){
-    if(pit.platoonWeakness.includes(bH)||pit.platoonWeakness==="Weak vs Both"){
-      points.push({icon:"🎯",text:`${pit.name} documented weak vs ${bH}`});
-    }
+  // ── Pitcher platoon weakness ──
+  if(pit?.platoonWeakness&&pit.platoonWeakness!=="None / Unknown"&&!points.some(p=>(p.html||"").includes("documented"))){
+    if(pit.platoonWeakness.includes(bH)||pit.platoonWeakness==="Weak vs Both")
+      points.push({icon:"🎯",html:`<span style="color:#52c278;font-weight:700">${pit.name} documented weak vs ${bH}</span>`});
   }
 
-  // ── Lineup spot bonus ──
+  // ── Lineup spot ──
   if(b.lineupSpot&&pit?.weakLineupSpots){
     const spots=(pit.weakLineupSpots||"").split(",").map(s=>s.trim());
     if(spots.includes(String(b.lineupSpot)))
-      points.push({icon:"📍",text:`Batting ${b.lineupSpot} — matches ${pit.name}'s documented weak spot`});
+      points.push({icon:"📍",html:`<span style="color:#e8a830;font-weight:700">Batting ${b.lineupSpot}</span> <span style="color:var(--muted)">— matches ${pit.name}'s weak lineup spot</span>`});
   }
 
   if(points.length===0)
-    points.push({icon:"➡️",text:"No pitcher data loaded — import pitcher CSV for full breakdown"});
+    points.push({icon:"➡️",html:`<span style="color:var(--muted)">No pitcher data — import pitcher CSV for full breakdown</span>`});
 
   return points;
 }
@@ -1787,8 +1803,8 @@ function mkSlateRow(b){
   const insights=genMatchupInsights(b);
   const panel=mk("div",{display:"none",marginTop:"10px",paddingTop:"10px",borderTop:"1px solid var(--border)"});
   insights.forEach(pt=>{
-    const line=mk("div",{display:"flex",alignItems:"flex-start",gap:"7px",marginBottom:"6px",fontSize:"12px",lineHeight:"1.5",color:"var(--text2)"});
-    line.innerHTML=`<span style="flex-shrink:0;font-size:14px">${pt.icon}</span><span>${pt.text}</span>`;
+    const line=mk("div",{display:"flex",alignItems:"flex-start",gap:"7px",marginBottom:"8px",fontSize:"12px",lineHeight:"1.5"});
+    line.innerHTML=`<span style="flex-shrink:0;font-size:15px;margin-top:1px">${pt.icon}</span><span>${pt.html||pt.text||""}</span>`;
     panel.appendChild(line);
   });
   row.appendChild(panel);
