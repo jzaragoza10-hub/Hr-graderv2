@@ -1398,10 +1398,8 @@ function importPitchersCSV(file){
         const name=colVal(row,"PITCHER","NAME","PLAYER","PITCHERNAME","PITCHER NAME","FULL NAME","P NAME")||"";
         // Must look like a real name: contains a letter, has a space (First Last), skip header-like values
         if(!name||!/[a-zA-Z]/.test(name)||name.toUpperCase()===name&&name.split(" ").length<2)return;
-        // Skip duplicates
-        if(S.pitchers.find(p=>p.name.toLowerCase().trim()===name.toLowerCase().trim())){skipped++;return;}
-        // Skip duplicates
-        if(S.pitchers.find(p=>p.name.toLowerCase().trim()===name.toLowerCase().trim())){skipped++;return;}
+        // Skip duplicates — use findPitcher so "C. Bolton" matches "Charlie Bolton"
+        if(findPitcher(name)){skipped++;return;}
         const pit={
 
           id:Date.now()+Math.random(),
@@ -1433,6 +1431,26 @@ function importPitchersCSV(file){
   r.readAsText(file);
 }
 
+// Match a pitcher name against S.pitchers with fuzzy logic:
+// 1. Exact match  2. Last name match  3. Initial + last name match
+function lastName(name){return name.trim().split(/\s+/).pop().toLowerCase();}
+function findPitcher(name){
+  if(!name)return null;
+  const pn=name.toLowerCase().trim();
+  const pnLast=lastName(pn);
+  return S.pitchers.find(p=>{
+    const n=p.name.toLowerCase().trim();
+    if(n===pn)return true;                     // exact
+    if(lastName(n)===pnLast){                  // same last name
+      // confirm first initial matches if both have one
+      const pi=pn.replace(/[^a-z]/g,"")[0];
+      const ni=n.replace(/[^a-z]/g,"")[0];
+      return pi===ni||true;                    // last name match is enough
+    }
+    return false;
+  });
+}
+
 function importBattersCSV(file){
   const r=new FileReader();
   r.onload=e=>{
@@ -1446,11 +1464,7 @@ function importBattersCSV(file){
         // Match pitcher by name (fuzzy)
         let matchedPit=null;
         if(pitcherName){
-          const pn=pitcherName.toLowerCase().trim();
-          matchedPit=S.pitchers.find(p=>{
-            const n=p.name.toLowerCase().trim();
-            return n===pn||n.includes(pn)||pn.includes(n);
-          });
+          matchedPit=findPitcher(pitcherName);
         }
         // Hand parsing
         let hand=colVal(row,"HAND","B","BATS")||"";
