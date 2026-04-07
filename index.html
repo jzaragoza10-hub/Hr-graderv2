@@ -278,6 +278,8 @@ let W={
   batted:    {label:"Air Ball Ratio",      max:7,  color:"#c8922a"},
   pull:      {label:"Pull %",              max:5,  color:"#e8a830"},
   hardHit:   {label:"Hard Hit %",          max:5,  color:"#d4b060"},
+  xwoba:     {label:"xwOBA",              max:12, color:"#a78bfa"},
+  kRate:     {label:"K% (Contact)",        max:4,  color:"#f87171"},
   bvp:       {label:"BvP History",         max:20, color:"#a87848"},
   platoon:   {label:"Platoon Edge",        max:12, color:"#c084a0"},
   pitcher:   {label:"Pitcher Vuln.",       max:24, color:"#c0392b"},
@@ -289,7 +291,7 @@ let W={
 const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
 // ── STATE ─────────────────────────────────────────────────────────────────
-let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:""};
+let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:"",batterStats:{}};
 let BF={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10),odds:""};
 let PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip",weakLineupSpots:""};
 
@@ -297,6 +299,7 @@ function load(){
   try{
     const b=localStorage.getItem("hrg2-batters");if(b)S.batters=JSON.parse(b);
     const p=localStorage.getItem("hrg2-pitchers");if(p)S.pitchers=JSON.parse(p);
+    const bs=localStorage.getItem("hrg2-bstats");if(bs)S.batterStats=JSON.parse(bs);
     const w=localStorage.getItem("hrg2-weights");if(w){const saved=JSON.parse(w);Object.keys(saved).forEach(k=>{if(W[k]!==undefined)W[k]=saved[k];});}
     // Always ensure every default weight key exists (guards against stale localStorage)
     Object.keys(W_DEFAULT).forEach(k=>{if(!W[k])W[k]=JSON.parse(JSON.stringify(W_DEFAULT[k]));});
@@ -307,6 +310,7 @@ function save(){
     localStorage.setItem("hrg2-batters",JSON.stringify(S.batters));
     localStorage.setItem("hrg2-pitchers",JSON.stringify(S.pitchers));
     localStorage.setItem("hrg2-weights",JSON.stringify(W));
+    localStorage.setItem("hrg2-bstats",JSON.stringify(S.batterStats));
   }catch(e){}
 }
 
@@ -347,8 +351,46 @@ function getSplitStats(pit,batHand){
   };
 }
 
+// ── BATTER STAT BLEND ────────────────────────────────────────────────────
+// Merges 2025 (baseline) + 2026 (early trend) batter season stats onto bat object.
+// 2026 is weighted by PA; 2025 is weighted at 50% of its PA to favor recency.
+function getBatterStats(bat){
+  const key=normName(bat.name);
+  const s26=S.batterStats[key+'2026'];
+  const s25=S.batterStats[key+'2025'];
+  if(!s26&&!s25)return bat;
+  const pa26=parseFloat(s26?.pa)||0;
+  const pa25=parseFloat(s25?.pa)||0;
+  const w26=pa26, w25=pa25*0.5, tot=w26+w25;
+  const blend=(a,b)=>{
+    const na=parseFloat(a),nb=parseFloat(b);
+    if(isNaN(na)&&isNaN(nb))return '';
+    if(isNaN(na))return String(nb);
+    if(isNaN(nb))return String(na);
+    if(tot===0)return String(na);
+    return ((na*w26+nb*w25)/tot).toFixed(3);
+  };
+  const pick=(a,b)=>a||b||'';
+  // Only override batter fields if season data is richer than BvP data
+  const merged={...bat};
+  if(s26||s25){
+    const src26=s26||{}, src25=s25||{};
+    if(!bat.avgEV||bat.avgEV==='')    merged.avgEV    =blend(src26.ev,src25.ev)||bat.avgEV;
+    if(!bat.barrelPct||bat.barrelPct==='') merged.barrelPct=blend(src26.barrel,src25.barrel)||bat.barrelPct;
+    if(!bat.hrFbPct||bat.hrFbPct==='')    merged.hrFbPct  =blend(src26.hrfb,src25.hrfb)||bat.hrFbPct;
+    if(!bat.hardHitPct||bat.hardHitPct==='') merged.hardHitPct=blend(src26.hardHit,src25.hardHit)||bat.hardHitPct;
+    if(!bat.pullPct||bat.pullPct==='')   merged.pullPct  =blend(src26.pull,src25.pull)||bat.pullPct;
+    if(!bat.fbPct||bat.fbPct==='')      merged.fbPct    =blend(src26.fb,src25.fb)||bat.fbPct;
+    // Always use season xwOBA and K% (not in BvP CSV)
+    merged.xwoba=blend(src26.xwoba,src25.xwoba);
+    merged.kPct =blend(src26.kPct,src25.kPct);
+  }
+  return merged;
+}
+
 // ── SCORING ENGINE ─────────────────────────────────────────────────────────
 function score(bat,pit){
+  bat=getBatterStats(bat); // augment with season stats before scoring
   const n=v=>{const x=parseFloat(v);return isNaN(x)?null:x;};
   const pts=(raw,max)=>Math.max(0,Math.min(Math.round(raw*max),max));
   const B={};
@@ -395,6 +437,20 @@ function score(bat,pit){
   B.hardHit=hh===null?{s:0,l:"—"}:{
     s:pts(hh>=58?1:hh>=52?.82:hh>=46?.62:hh>=40?.40:hh>=34?.20:.06,W.hardHit.max),
     l:hh>=54?"Elite":hh>=48?"Strong":hh>=42?"Avg":"Low"
+  };
+
+  // xwOBA — expected weighted on-base average (2025 baseline + 2026 blend)
+  const xw=n(bat.xwoba);
+  B.xwoba=xw===null?{s:0,l:"—"}:{
+    s:pts(xw>=.410?1:xw>=.385?.85:xw>=.355?.68:xw>=.320?.48:xw>=.290?.28:.08,W.xwoba?.max||12),
+    l:xw>=.400?"Elite":xw>=.370?"Strong":xw>=.330?"Avg":"Weak"
+  };
+
+  // K% — lower strikeout rate = better contact discipline
+  const kp=n(bat.kPct);
+  B.kRate=kp===null?{s:0,l:"—"}:{
+    s:pts(kp<=10?1:kp<=14?.85:kp<=18?.65:kp<=22?.44:kp<=27?.22:.06,W.kRate?.max||4),
+    l:kp<=11?"Elite":kp<=16?"Good":kp<=22?"Avg":"High K%"
   };
 
   // BvP — direct or handedness splits
@@ -1225,6 +1281,30 @@ function rPitchers(c){
     splitsToggle.onclick=()=>{splitsPanel.style.display=splitsPanel.style.display==="none"?"block":"none";};
     btnRow.appendChild(splitsToggle);
     btnRow.appendChild(splitsPanel);
+
+    // Batter season stats import
+    const bsLoaded26=Object.keys(S.batterStats).some(k=>k.endsWith('2026'));
+    const bsLoaded25=Object.keys(S.batterStats).some(k=>k.endsWith('2025'));
+    const bsToggle=el("button","btn-sm",`🧑‍💼 Batter Stats${(bsLoaded26||bsLoaded25)?" ✓":""}`);
+    bsToggle.style.cssText="width:100%;padding:10px;font-size:13px;margin-top:6px;"+((bsLoaded26||bsLoaded25)?"border-color:rgba(167,139,250,.4);color:#a78bfa;":"");
+    const bsPanel=mk("div",{display:"none",marginTop:"6px"});
+    const bsHdr=mk("div",{fontSize:"10px",color:"var(--muted)",marginBottom:"7px",lineHeight:"1.5"});
+    bsHdr.textContent="Import season stats (Fangraphs/Savant). 2025 = baseline, 2026 = trend. Feeds EV, Barrel, xwOBA, K% scoring automatically.";
+    bsPanel.appendChild(bsHdr);
+    const bsGrid=mk("div",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px"});
+    [[2026,'#a78bfa'],[2025,'#8888e0']].forEach(([year,col])=>{
+      const loaded=Object.keys(S.batterStats).some(k=>k.endsWith(String(year)));
+      const lbl=el("label","btn-sm",`📥 Batters ${year}${loaded?" ✓":""}`);
+      lbl.style.cssText=`display:block;cursor:pointer;text-align:center;padding:10px 6px;font-size:12px;border-radius:10px;${loaded?`border-color:rgba(167,139,250,.4);color:${col};`:""}`;
+      const inp=document.createElement("input");inp.type="file";inp.accept=".csv";inp.style.display="none";
+      inp.onchange=ev=>{if(ev.target.files[0])importBatterStatsCSV(ev.target.files[0],year);};
+      lbl.appendChild(inp);bsGrid.appendChild(lbl);
+    });
+    bsPanel.appendChild(bsGrid);
+    bsToggle.onclick=()=>{bsPanel.style.display=bsPanel.style.display==="none"?"block":"none";};
+    btnRow.appendChild(bsToggle);
+    btnRow.appendChild(bsPanel);
+
     c.appendChild(btnRow);
   }
 }
@@ -1440,7 +1520,7 @@ function clearConfirmModal(msg,onConfirm){
 }
 
 function exportData(){
-  const d={batters:S.batters,pitchers:S.pitchers,weights:W,exported:new Date().toISOString()};
+  const d={batters:S.batters,pitchers:S.pitchers,weights:W,batterStats:S.batterStats,exported:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -1456,6 +1536,7 @@ function importData(file){
       const d=JSON.parse(e.target.result);
       if(d.batters)S.batters=d.batters;
       if(d.pitchers)S.pitchers=d.pitchers;
+      if(d.batterStats)S.batterStats=d.batterStats;
       if(d.weights){Object.keys(d.weights).forEach(k=>{if(W[k]!==undefined)W[k]=d.weights[k];});Object.keys(W_DEFAULT).forEach(k=>{if(!W[k])W[k]=JSON.parse(JSON.stringify(W_DEFAULT[k]));});}
       save();render();toast("✅ Data restored!");
     }catch(err){toast("⚠️ Invalid backup file");}
@@ -1625,6 +1706,43 @@ function findPitcher(name){
     }
     return false;
   });
+}
+
+// ── BATTER SEASON STATS CSV ──────────────────────────────────────────────
+// Accepts Fangraphs or Baseball Savant exports.
+// year = 2025 | 2026
+function importBatterStatsCSV(file, year){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const {rows,headers}=parseCSV(e.target.result);
+      if(!rows.length){toast(`⚠️ No rows found in ${year} batter stats`);return;}
+      let added=0;
+      rows.forEach(row=>{
+        const name=colVal(row,"NAME","PLAYER","BATTER","FULLNAME","LAST_NAME,FIRST_NAME")||'';
+        if(!name)return;
+        const key=normName(name)+String(year);
+        S.batterStats[key]={
+          pa:       colVal(row,"PA","PLATE APPEARANCES")||'',
+          ev:       colVal(row,"EV","AVG EV","LAUNCH SPEED","AVG_LAUNCH_SPEED")||'',
+          barrel:   colVal(row,"BARREL%","BRLS/BBE%","BARREL_BATTED_RATE","BARREL RATE")||'',
+          hrfb:     colVal(row,"HR/FB","HR/FB%","HRFB%")||'',
+          hardHit:  colVal(row,"HARD%","HARDHIT%","HARD HIT%","HARD_HIT_PERCENT")||'',
+          pull:     colVal(row,"PULL%")||'',
+          fb:       colVal(row,"FB%","FLY BALL%")||'',
+          xwoba:    colVal(row,"XWOBA","X_WOBA","EXPECTED WOBA")||'',
+          kPct:     colVal(row,"K%","SO%","STRIKEOUT%")||'',
+          iso:      colVal(row,"ISO")||'',
+          woba:     colVal(row,"WOBA","W_OBA")||'',
+        };
+        added++;
+      });
+      save();
+      const loaded=Object.keys(S.batterStats).filter(k=>k.endsWith(String(year))).length;
+      toast(`✅ ${added} batters loaded (${year}) — ${loaded} total in ${year}`);
+    }catch(err){toast('⚠️ Batter stats error: '+err.message);}
+  };
+  r.readAsText(file);
 }
 
 function importBattersCSV(file){
@@ -1851,8 +1969,15 @@ function buildBoardFromBP(players){
       const normalizedPct=filledMax>0?Math.min(grade.total/filledMax,1):0;
       return{...bat,id:Date.now()+Math.random(),grade,normalizedPct,result:'Pending'};
     }catch(e){console.error('BP score error for',p.name,e);return null;}
-  }).filter(Boolean).sort((a,b)=>(b.normalizedPct||0)-(a.normalizedPct||0))
+  }).filter(Boolean)
     .filter((b,i,arr)=>arr.findIndex(x=>x.name===b.name)===i) // dedupe by name
+    .sort((a,b)=>{
+      // Confirmed starters (lineupSpot 1-9) first, then by score
+      const aConf=a.lineupSpot&&parseInt(a.lineupSpot)>0?1:0;
+      const bConf=b.lineupSpot&&parseInt(b.lineupSpot)>0?1:0;
+      if(bConf!==aConf)return bConf-aConf;
+      return (b.normalizedPct||0)-(a.normalizedPct||0);
+    })
     .reduce((acc,b)=>{
       if(acc.length>=20)return acc;
       const key=(b.pitcherName||b.pitcherHand||'unk').toLowerCase().trim();
