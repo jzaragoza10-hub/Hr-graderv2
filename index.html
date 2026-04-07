@@ -1602,6 +1602,14 @@ function importSplitsCSV(file,hand,year){
 // Match a pitcher name against S.pitchers with fuzzy logic:
 // 1. Exact match  2. Last name match  3. Initial + last name match
 function lastName(name){return name.trim().split(/\s+/).pop().toLowerCase();}
+// Normalize a player name for matching: strip accents, Jr/Sr/suffixes, punctuation
+function normName(n){
+  return n.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\b(jr\.?|sr\.?|ii|iii|iv)\b/g,'')
+    .replace(/[^a-z]/g,' ').replace(/\s+/g,' ').trim();
+}
+function matchBatterName(a,b){return normName(a)===normName(b);}
 function findPitcher(name){
   if(!name)return null;
   const pn=name.toLowerCase().trim();
@@ -1769,7 +1777,7 @@ function processBpPlayers(players){
   let top20;
   try{
     players.forEach(p=>{
-      const sb=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
+      const sb=S.slate.find(b=>matchBatterName(b.name,p.name));
       if(sb){
         sb.bpHRProb=p.bpHRProb;
         const pit=S.pitchers.find(x=>String(x.id)===String(sb.pitcherId));
@@ -1816,7 +1824,7 @@ function buildBoardFromBP(players){
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
   return players.map(p=>{
     try{
-      const sl=S.slate.find(b=>b.name.toLowerCase().trim()===p.name.toLowerCase().trim()||lastName(b.name)===lastName(p.name));
+      const sl=S.slate.find(b=>matchBatterName(b.name,p.name));
       let pit=null;
       if(sl?.pitcherId) pit=S.pitchers.find(x=>String(x.id)===String(sl.pitcherId));
       if(!pit&&p.opponent) pit=S.pitchers.find(x=>x.team&&x.team.toUpperCase().replace(/\s/g,'')===p.opponent.toUpperCase().replace(/\s/g,''));
