@@ -968,6 +968,7 @@ function mkCard(bat,rank){
       </div>
       <div style="font-size:11px;color:var(--muted);line-height:1.5">
         vs ${bat.pitcherName||"?"} ${bat.pitcherHand?"("+bat.pitcherHand+")":""}
+        ${!bat.pitcherId?`<span style="color:var(--amber);font-weight:700"> ⚠️ No pitcher matched</span>`:""}
         ${bat.park?" · "+bat.park.split("(")[0].trim():""}
       </div>
       ${bat.result&&bat.result!=="Pending"?`<div style="font-size:11px;font-weight:700;margin-top:3px;color:${bat.result.includes("Hit")?"var(--green2)":"var(--red2)"}">${bat.result}</div>`:""}
@@ -1972,10 +1973,12 @@ function buildBoardFromBP(players){
   }).filter(Boolean)
     .filter((b,i,arr)=>arr.findIndex(x=>x.name===b.name)===i) // dedupe by name
     .sort((a,b)=>{
-      // Confirmed starters (lineupSpot 1-9) first, then by score
+      // Priority: confirmed lineup > pitcher matched > score
       const aConf=a.lineupSpot&&parseInt(a.lineupSpot)>0?1:0;
       const bConf=b.lineupSpot&&parseInt(b.lineupSpot)>0?1:0;
       if(bConf!==aConf)return bConf-aConf;
+      const aPit=a.pitcherId?1:0, bPit=b.pitcherId?1:0;
+      if(bPit!==aPit)return bPit-aPit;
       return (b.normalizedPct||0)-(a.normalizedPct||0);
     })
     .reduce((acc,b)=>{
