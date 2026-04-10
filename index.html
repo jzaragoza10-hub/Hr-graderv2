@@ -278,8 +278,6 @@ let W={
   batted:    {label:"Air Ball Ratio",      max:7,  color:"#c8922a"},
   pull:      {label:"Pull %",              max:5,  color:"#e8a830"},
   hardHit:   {label:"Hard Hit %",          max:5,  color:"#d4b060"},
-  xwoba:     {label:"xwOBA",              max:12, color:"#a78bfa"},
-  kRate:     {label:"K% (Contact)",        max:4,  color:"#f87171"},
   bvp:       {label:"BvP History",         max:20, color:"#a87848"},
   platoon:   {label:"Platoon Edge",        max:12, color:"#c084a0"},
   pitcher:   {label:"Pitcher Vuln.",       max:24, color:"#c0392b"},
@@ -437,20 +435,6 @@ function score(bat,pit){
   B.hardHit=hh===null?{s:0,l:"—"}:{
     s:pts(hh>=58?1:hh>=52?.82:hh>=46?.62:hh>=40?.40:hh>=34?.20:.06,W.hardHit.max),
     l:hh>=54?"Elite":hh>=48?"Strong":hh>=42?"Avg":"Low"
-  };
-
-  // xwOBA — expected weighted on-base average (2025 baseline + 2026 blend)
-  const xw=n(bat.xwoba);
-  B.xwoba=xw===null?{s:0,l:"—"}:{
-    s:pts(xw>=.410?1:xw>=.385?.85:xw>=.355?.68:xw>=.320?.48:xw>=.290?.28:.08,W.xwoba?.max||12),
-    l:xw>=.400?"Elite":xw>=.370?"Strong":xw>=.330?"Avg":"Weak"
-  };
-
-  // K% — lower strikeout rate = better contact discipline
-  const kp=n(bat.kPct);
-  B.kRate=kp===null?{s:0,l:"—"}:{
-    s:pts(kp<=10?1:kp<=14?.85:kp<=18?.65:kp<=22?.44:kp<=27?.22:.06,W.kRate?.max||4),
-    l:kp<=11?"Elite":kp<=16?"Good":kp<=22?"Avg":"High K%"
   };
 
   // BvP — direct or handedness splits
