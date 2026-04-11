@@ -284,7 +284,7 @@ let W={
   park:      {label:"Park Factor",         max:8,  color:"#4a7fa8"},
   weather:   {label:"Weather",             max:6,  color:"#60a0c0"},
   pitchBoost:{label:"Pitch Boost",         max:8,  color:"#8888e0"},
-  bpBoost:   {label:"BallparkPal Prob",    max:10, color:"#60c0ff"},
+  bpBoost:   {label:"BallparkPal Prob",    max:18, color:"#60c0ff"},
 };
 const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
@@ -2003,7 +2003,8 @@ function processBpPlayers(players){
 function buildBoardFromBP(players){
   const today=new Date().toISOString().slice(0,10);
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
-  return players.map(p=>{
+  const BP_MIN=0.05; // minimum BallparkPal HR probability to qualify for top 20
+  return players.filter(p=>(p.bpHRProb||0)>=BP_MIN).map(p=>{
     try{
       const sl=S.slate.find(b=>matchBatterName(b.name,p.name));
       let pit=null;
