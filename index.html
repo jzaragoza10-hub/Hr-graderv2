@@ -523,7 +523,7 @@ function score(bat,pit){
   // BallparkPal HR probability (decimal: 0.08 = 8%)
   const bp=n(bat.bpHRProb);
   B.bpBoost=bp===null?{s:0,l:"—"}:{
-    s:pts(bp>=.20?1:bp>=.15?.80:bp>=.10?.58:bp>=.07?.38:bp>=.04?.18:.05,W.bpBoost?.max||10),
+    s:pts(bp>=.20?1:bp>=.15?.80:bp>=.10?.58:bp>=.07?.38:bp>=.04?.18:.05,W.bpBoost?.max||18),
     l:bp>=.18?"Elite":bp>=.12?"Strong":bp>=.07?"Avg":"Low"
   };
 
@@ -2003,7 +2003,7 @@ function processBpPlayers(players){
 function buildBoardFromBP(players){
   const today=new Date().toISOString().slice(0,10);
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
-  const BP_MIN=0.05; // minimum BallparkPal HR probability to qualify for top 20
+  const BP_MIN=0.08; // minimum BallparkPal HR probability to qualify for top 20 (8%+)
   return players.filter(p=>(p.bpHRProb||0)>=BP_MIN).map(p=>{
     try{
       const sl=S.slate.find(b=>matchBatterName(b.name,p.name));
