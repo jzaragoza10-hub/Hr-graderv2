@@ -313,40 +313,52 @@ function save(){
 }
 
 // ── SPLIT STAT BLENDING ───────────────────────────────────────────────────
-// Returns the best available pitcher stats for a given batter handedness.
-// Priority: 2026 split → blend 2026+2025 → 2025 split → season totals
+// Returns best available pitcher stats for a given batter handedness.
+// Priority: hand splits (2026+2025 blend) → season stats (2026+2025 blend) → base fields
 function getSplitStats(pit,batHand){
   if(!pit)return{};
+
+  // Helper: BF-weighted blend of two stat objects
+  const blendStats=(s26,s25,bf26default=20,bf25default=100)=>{
+    if(!s26&&!s25)return null;
+    if(s26&&!s25)return s26;
+    if(!s26&&s25)return s25;
+    const bf26=parseFloat(s26.bf)||bf26default;
+    const bf25=parseFloat(s25.bf)||bf25default;
+    const w26=bf26,w25=bf25*0.5,tot=w26+w25;
+    const b=(a,bb)=>{
+      const va=parseFloat(a),vb=parseFloat(bb);
+      if(isNaN(va)&&isNaN(vb))return '';
+      if(isNaN(va))return String(vb);
+      if(isNaN(vb))return String(va);
+      return String(((va*w26+vb*w25)/tot).toFixed(3));
+    };
+    return{
+      hr9:           b(s26.hr9,s25.hr9),
+      isoAllowed:    b(s26.isoAllowed,s25.isoAllowed),
+      barrelAllowed: b(s26.barrelAllowed,s25.barrelAllowed),
+      hardHitAllowed:b(s26.hardHitAllowed,s25.hardHitAllowed),
+      era:           b(s26.era,s25.era),
+      bf:            String(bf26+bf25),
+    };
+  };
+
   const hand=batHand==="LHB"?"LHB":batHand==="RHB"?"RHB":null;
-  if(!hand||!pit.splits)return pit; // no splits loaded, use season totals
 
-  const s26=pit.splits[hand+"2026"];
-  const s25=pit.splits[hand+"2025"];
+  // 1. Try hand-specific splits
+  if(hand&&pit.splits){
+    const blended=blendStats(pit.splits[hand+"2026"],pit.splits[hand+"2025"]);
+    if(blended)return{...pit,...blended};
+  }
 
-  if(!s26&&!s25)return pit; // no splits for this hand, use season totals
+  // 2. Fall back to season totals (2026 + 2025 blend)
+  if(pit.seasonStats){
+    const blended=blendStats(pit.seasonStats['2026'],pit.seasonStats['2025'],30,200);
+    if(blended)return{...pit,...blended};
+  }
 
-  if(s26&&!s25)return{...pit,...s26};
-  if(!s26&&s25)return{...pit,...s25};
-
-  // Both years: blend weighted by BF (2025 at 50% of its actual weight to favor recency)
-  const bf26=parseFloat(s26.bf)||20;
-  const bf25=parseFloat(s25.bf)||20;
-  const w26=bf26,w25=bf25*0.5;
-  const total=w26+w25;
-  const blend=(a,b)=>{
-    const va=parseFloat(a),vb=parseFloat(b);
-    if(isNaN(va)&&isNaN(vb))return null;
-    if(isNaN(va))return String(vb);
-    if(isNaN(vb))return String(va);
-    return String(((va*w26+vb*w25)/total).toFixed(3));
-  };
-  return{
-    ...pit,
-    hr9:     blend(s26.hr9,     s25.hr9)     ||pit.hr9,
-    isoAllowed:  blend(s26.isoAllowed,  s25.isoAllowed)  ||pit.isoAllowed,
-    barrelAllowed:   blend(s26.barrelAllowed,   s25.barrelAllowed)   ||pit.barrelAllowed,
-    hardHitAllowed:  blend(s26.hardHitAllowed,  s25.hardHitAllowed)  ||pit.hardHitAllowed,
-  };
+  // 3. Use base fields as-is
+  return pit;
 }
 
 // ── BATTER STAT BLEND ────────────────────────────────────────────────────
@@ -1267,6 +1279,29 @@ function rPitchers(c){
     btnRow.appendChild(splitsToggle);
     btnRow.appendChild(splitsPanel);
 
+    // Pitcher season stats (2025 baseline + 2026)
+    const psLoaded26=S.pitchers.some(p=>p.seasonStats?.['2026']);
+    const psLoaded25=S.pitchers.some(p=>p.seasonStats?.['2025']);
+    const psToggle=el("button","btn-sm",`📈 Pitcher Season Stats${(psLoaded26||psLoaded25)?" ✓":""}`);
+    psToggle.style.cssText="width:100%;padding:10px;font-size:13px;margin-top:6px;"+((psLoaded26||psLoaded25)?"border-color:rgba(192,57,43,.4);color:var(--red2);":"");
+    const psPanel=mk("div",{display:"none",marginTop:"6px"});
+    const psHdr=mk("div",{fontSize:"10px",color:"var(--muted)",marginBottom:"7px",lineHeight:"1.5"});
+    psHdr.textContent="Full-season pitcher stats. 2026 = current form, 2025 = baseline. Blended automatically when scoring matchups.";
+    psPanel.appendChild(psHdr);
+    const psGrid=mk("div",{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px"});
+    [[2026,'var(--red2)'],[2025,'#e88080']].forEach(([yr,col])=>{
+      const loaded=yr===2026?psLoaded26:psLoaded25;
+      const lbl=el("label","btn-sm",`📥 Pitchers ${yr}${loaded?" ✓":""}`);
+      lbl.style.cssText=`display:block;cursor:pointer;text-align:center;padding:10px 6px;font-size:12px;border-radius:10px;${loaded?`border-color:rgba(192,57,43,.4);color:${col};`:""}`;
+      const inp=document.createElement("input");inp.type="file";inp.accept=".csv";inp.style.display="none";
+      inp.onchange=ev=>{if(ev.target.files[0])importPitcherSeasonCSV(ev.target.files[0],yr);};
+      lbl.appendChild(inp);psGrid.appendChild(lbl);
+    });
+    psPanel.appendChild(psGrid);
+    psToggle.onclick=()=>{psPanel.style.display=psPanel.style.display==="none"?"block":"none";};
+    btnRow.appendChild(psToggle);
+    btnRow.appendChild(psPanel);
+
     // Batter season stats import
     const bsLoaded26=Object.keys(S.batterStats).some(k=>k.endsWith('2026'));
     const bsLoaded25=Object.keys(S.batterStats).some(k=>k.endsWith('2025'));
@@ -1631,6 +1666,43 @@ function importPitchersCSV(file){
   r.readAsText(file);
 }
 
+// ── PITCHER SEASON STATS CSV ─────────────────────────────────────────────
+// Full-season pitcher CSV (Fangraphs / Baseball Savant / own summary).
+// year = 2025 | 2026  — stored on pit.seasonStats[year]
+function importPitcherSeasonCSV(file,year){
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const {rows,headers}=parseCSV(e.target.result);
+      if(!rows.length){alert(`Empty CSV.\nHeaders: ${headers.join(", ")}`);return;}
+      let updated=0,skipped=0;
+      rows.forEach(row=>{
+        const name=colVal(row,"PITCHER","NAME","PLAYER","PITCHERNAME")||Object.values(row)[0]||"";
+        if(!name||!/[a-zA-Z]/.test(name))return;
+        const pit=findPitcher(name);
+        if(!pit){skipped++;return;}
+        if(!pit.seasonStats)pit.seasonStats={};
+        pit.seasonStats[String(year)]={
+          hr9:         colVal(row,"HR/9","HR9")||"",
+          isoAllowed:  colVal(row,"ISO","ISO ALLOWED")||"",
+          barrelAllowed:   colVal(row,"BARREL%","BARREL","BARREL RATE")||"",
+          hardHitAllowed:  colVal(row,"HARD HIT%","HARD HIT","HH%","HARDHIT%")||"",
+          era:         colVal(row,"ERA")||"",
+          ip:          colVal(row,"IP","INNINGS PITCHED")||"",
+          bf:          colVal(row,"BF","BATTERS FACED","TBF")||"",
+          fip:         colVal(row,"FIP")||"",
+          whip:        colVal(row,"WHIP")||"",
+        };
+        updated++;
+      });
+      save();
+      if(updated===0)alert(`No pitchers matched.\nHeaders: ${headers.join(", ")}\n\nRows: ${rows.length} — check names match Pitchers tab.`);
+      else toast(`✅ Pitcher ${year} season stats: ${updated} matched, ${skipped} unmatched`);
+    }catch(err){alert("Pitcher season stats error: "+(err.message||String(err)));}
+  };
+  r.readAsText(file);
+}
+
 // ── SPLITS CSV IMPORT ────────────────────────────────────────────────────
 // hand = "LHB" or "RHB", year = 2025 or 2026
 function importSplitsCSV(file,hand,year){
@@ -1639,12 +1711,12 @@ function importSplitsCSV(file,hand,year){
     try{
       const {rows,headers}=parseCSV(e.target.result);
       if(rows.length===0){alert(`Empty CSV.\nHeaders: ${headers.join(", ")}`);return;}
-      let updated=0;
+      let updated=0,skipped=0;
       rows.forEach(row=>{
         const name=colVal(row,"PITCHER","NAME","PLAYER","PITCHERNAME")||Object.values(row)[0]||"";
         if(!name||!/[a-zA-Z]/.test(name))return;
         const pit=findPitcher(name);
-        if(!pit)return;
+        if(!pit){skipped++;return;}
         if(!pit.splits)pit.splits={};
         const key=hand+year;
         pit.splits[key]={
@@ -1658,8 +1730,8 @@ function importSplitsCSV(file,hand,year){
         updated++;
       });
       save();
-      if(updated===0)alert(`No pitchers matched.\nHeaders: ${headers.join(", ")}`);
-      else toast(`✅ ${hand} ${year} splits loaded for ${updated} pitchers`);
+      if(updated===0)alert(`No pitchers matched.\nHeaders: ${headers.join(", ")}\n\nRows parsed: ${rows.length} — check that pitcher names in this CSV match names in your Pitchers tab.`);
+      else toast(`✅ ${hand} ${year} splits: ${updated} matched, ${skipped} unmatched`);
     }catch(err){alert("Splits import error: "+(err.message||String(err)));}
   };
   r.readAsText(file);
@@ -1678,16 +1750,22 @@ function normName(n){
 function matchBatterName(a,b){return normName(a)===normName(b);}
 function findPitcher(name){
   if(!name)return null;
-  const pn=name.toLowerCase().trim();
+  // Handle "Last, First" format → convert to "First Last"
+  let pn=name.trim();
+  if(pn.includes(','))pn=pn.split(',').map(s=>s.trim()).reverse().join(' ');
+  pn=pn.toLowerCase();
   const pnLast=lastName(pn);
+  const pnNorm=normName(pn);
   return S.pitchers.find(p=>{
-    const n=p.name.toLowerCase().trim();
-    if(n===pn)return true;                     // exact
-    if(lastName(n)===pnLast){                  // same last name
-      // confirm first initial matches if both have one
-      const pi=pn.replace(/[^a-z]/g,"")[0];
-      const ni=n.replace(/[^a-z]/g,"")[0];
-      return pi===ni||true;                    // last name match is enough
+    let n=p.name.trim();
+    if(n.includes(','))n=n.split(',').map(s=>s.trim()).reverse().join(' ');
+    n=n.toLowerCase();
+    if(n===pn)return true;                          // exact
+    if(normName(n)===pnNorm)return true;            // normalized exact (accents/suffixes)
+    if(lastName(n)===pnLast){                       // same last name — check first initial
+      const pi=pn.replace(/[^a-z]/g,'')[0];
+      const ni=n.replace(/[^a-z]/g,'')[0];
+      return !pi||!ni||pi===ni;                     // match if either has no first initial, or initials agree
     }
     return false;
   });
