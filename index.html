@@ -210,6 +210,10 @@ input[type=range]{accent-color:var(--accent);width:80px;}
 .slate-row{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;}
 .slate-pitcher-hdr{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin:14px 0 8px;display:flex;align-items:center;gap:8px;}
 
+/* Parlay tab */
+.parlay-leg{display:flex;align-items:flex-start;gap:10px;padding:10px 0;}
+.parlay-leg+.parlay-leg{border-top:1px solid var(--border);}
+
 /* Tier config */
 </style>
 
@@ -732,7 +736,7 @@ function rHeader(){
 
   // Bottom nav
   const nav=document.getElementById("nav");nav.innerHTML="";
-  [{id:"board",icon:"📊",l:"Board"},{id:"add",icon:"＋",l:"Add"},{id:"pitchers",icon:"⚾",l:"Pitchers"},{id:"slate",icon:"📋",l:"Slate"},{id:"track",icon:"📈",l:"Track"},{id:"weights",icon:"⚙",l:"Settings"}].forEach(t=>{
+  [{id:"board",icon:"📊",l:"Board"},{id:"add",icon:"＋",l:"Add"},{id:"pitchers",icon:"⚾",l:"Pitchers"},{id:"slate",icon:"📋",l:"Slate"},{id:"parlay",icon:"🎰",l:"Parlays"},{id:"track",icon:"📈",l:"Track"},{id:"weights",icon:"⚙",l:"Settings"}].forEach(t=>{
     const b=el("button","tab-btn"+(S.tab===t.id?" active":""));
     b.innerHTML=`<span class="tab-icon">${t.icon}</span><span>${t.l}</span>`;
     b.onclick=()=>{S.tab=t.id;render();};
@@ -746,6 +750,7 @@ function rContent(){
   else if(S.tab==="add")rAdd(c);
   else if(S.tab==="pitchers")rPitchers(c);
   else if(S.tab==="slate")rSlate(c);
+  else if(S.tab==="parlay")rParlay(c);
   else if(S.tab==="track")rTrack(c);
   else if(S.tab==="weights")rWeights(c);
 }
@@ -2443,6 +2448,131 @@ function mkSlateRow(b){
     e.target.textContent=open?"Why? ▾":"Why? ▴";
   };
   return row;
+}
+
+// ── PARLAY ────────────────────────────────────────────────────────────────
+function getParlayPickReason(bat){
+  const b=bat.grade?.B;if(!b)return"High composite grade";
+  const r=[];
+  const bp=bat.bpHRProb;
+  if(bp>=.18)r.push(`BP elite HR threat (${Math.round(bp*100)}%)`);
+  else if(bp>=.12)r.push(`BP strong HR prob (${Math.round(bp*100)}%)`);
+  const pitS=b.pitcher?.s||0;
+  if(pitS>=18)r.push("pitcher allows elite HR rate");
+  else if(pitS>=14)r.push("pitcher is HR-vulnerable");
+  if((b.platoon?.s||0)>=9)r.push("strong platoon edge");
+  if(bat.barrelPct&&parseFloat(bat.barrelPct)>=14)r.push(`high barrel rate (${bat.barrelPct}%)`);
+  if(bat.hrFbPct&&parseFloat(bat.hrFbPct)>=22)r.push(`elite HR/FB% (${bat.hrFbPct}%)`);
+  return r.length?r.slice(0,2).join(" · "):"High composite grade";
+}
+
+function generateParlays(sorted){
+  // Game key: two batters facing same pitcher = same game → avoid pairing
+  const gameKey=b=>(b.pitcherName||b.team||b.name).toLowerCase().trim();
+  function pick(pool,n){
+    const used=new Set(),res=[];
+    for(const b of pool){
+      if(res.length>=n)break;
+      const gk=gameKey(b);
+      if(!used.has(gk)){res.push(b);used.add(gk);}
+    }
+    return res;
+  }
+  const parlays=[];
+  // 1. Fire Power — top FIRE-tier picks from separate games
+  const fires=sorted.filter(b=>b.grade?.tier==='FIRE');
+  const fireLegs=pick(fires,3);
+  if(fireLegs.length>=2)parlays.push({name:"🔥 Fire Power",desc:"Top FIRE-rated picks from separate matchups",legs:fireLegs});
+  // 2. Slate Leaders — highest overall grade across different games
+  const slateLegs=pick(sorted,3);
+  if(slateLegs.length>=2)parlays.push({name:"⚡ Slate Leaders",desc:"Highest-graded batters across different games",legs:slateLegs});
+  // 3. Pitcher Killers — batters vs most HR-vulnerable pitchers
+  const pitSort=[...sorted].sort((a,b)=>(b.grade?.B?.pitcher?.s||0)-(a.grade?.B?.pitcher?.s||0));
+  const pitLegs=pick(pitSort,3);
+  if(pitLegs.length>=2)parlays.push({name:"🎯 Pitcher Killers",desc:"Batters facing the most HR-vulnerable starters",legs:pitLegs});
+  // 4. 4-Leg Power — top 4 from different games for bigger payout
+  const fourLegs=pick(sorted,4);
+  if(fourLegs.length>=4)parlays.push({name:"💰 4-Leg Power",desc:"Extended parlay for amplified payout, different games",legs:fourLegs});
+  // 5. Sleeper Value — mid-board picks (ranks 4-14) with solid grades
+  const sleepLegs=pick(sorted.slice(4,14),3);
+  if(sleepLegs.length>=2)parlays.push({name:"✨ Sleeper Value",desc:"Mid-board picks with strong fundamentals often overlooked",legs:sleepLegs});
+  // Fallback: safe 2-leg
+  while(parlays.length<5){
+    const safe=pick(sorted,2);
+    if(safe.length>=2)parlays.push({name:"🛡 Safe 2-Leg",desc:"Top 2 high-confidence picks from separate games",legs:safe});
+    else break;
+  }
+  return parlays.slice(0,5);
+}
+
+function rParlay(c){
+  const hd=mk("div",{marginBottom:"14px"});
+  const title=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"20px",color:"var(--text)",marginBottom:"3px"});
+  title.textContent="🎰 Mutts AI Parlay";
+  const sub=mk("div",{fontSize:"12px",color:"var(--muted)",marginBottom:"14px",lineHeight:"1.5"});
+  sub.textContent="AI-generated parlays from your board. No same-game players in any parlay.";
+  hd.appendChild(title);hd.appendChild(sub);c.appendChild(hd);
+
+  const sorted=[...S.batters].filter(b=>b.grade).sort((a,b)=>(b.normalizedPct||b.grade?.pct||0)-(a.normalizedPct||a.grade?.pct||0));
+  if(sorted.length<2){
+    const empty=mk("div",{textAlign:"center",color:"var(--muted)",padding:"40px 20px",fontSize:"14px",lineHeight:"1.8"});
+    empty.innerHTML="No board data yet.<br>Import BallparkPal from the <strong style='color:var(--text)'>Board</strong> tab to populate picks.";
+    c.appendChild(empty);return;
+  }
+
+  generateParlays(sorted).forEach((parlay,pi)=>{
+    const card=mk("div",{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"18px",padding:"18px",marginBottom:"12px"});
+    // Header
+    const phdr=mk("div",{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"});
+    const pnum=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"22px",color:"var(--amber)",flexShrink:"0"});
+    pnum.textContent=`P${pi+1}`;
+    const pinfo=mk("div",{flex:"1"});
+    const pname=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"17px",color:"var(--text)"});
+    pname.textContent=parlay.name;
+    const pdesc=mk("div",{fontSize:"11px",color:"var(--muted)",marginTop:"1px"});
+    pdesc.textContent=parlay.desc;
+    pinfo.appendChild(pname);pinfo.appendChild(pdesc);
+    const legBadge=mk("div",{background:"rgba(200,146,42,.12)",border:"1px solid rgba(200,146,42,.3)",borderRadius:"8px",padding:"3px 10px",fontSize:"12px",fontWeight:"700",color:"var(--amber)",flexShrink:"0",fontFamily:"'JetBrains Mono',monospace"});
+    legBadge.textContent=`${parlay.legs.length}-Leg`;
+    phdr.appendChild(pnum);phdr.appendChild(pinfo);phdr.appendChild(legBadge);
+    card.appendChild(phdr);
+
+    // Legs
+    parlay.legs.forEach((bat,li)=>{
+      const tier=bat.grade?.tier||"LEAN";
+      const isFire=tier==="FIRE",isLean=tier==="LEAN";
+      const tc=isFire?"#5cb870":isLean?"#e8a830":"var(--muted)";
+      const tbg=isFire?"rgba(82,194,120,.12)":isLean?"rgba(200,146,42,.12)":"rgba(120,120,120,.08)";
+      const leg=mk("div",{display:"flex",alignItems:"flex-start",gap:"10px",padding:"10px 0",borderTop:li===0?"none":"1px solid var(--border)"});
+      const tierBadge=mk("div",{background:tbg,border:`1px solid ${tc}`,borderRadius:"8px",padding:"4px 8px",fontSize:"11px",fontWeight:"800",color:tc,flexShrink:"0",fontFamily:"'Rajdhani',sans-serif",letterSpacing:".04em"});
+      tierBadge.textContent=isFire?"🔥 FIRE":isLean?"✅ LEAN":tier;
+      const info=mk("div",{flex:"1",minWidth:"0"});
+      const nameDiv=mk("div",{fontWeight:"700",fontSize:"14px",color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
+      nameDiv.textContent=bat.name;
+      const vsDiv=mk("div",{fontSize:"11px",color:"var(--muted)",marginTop:"2px"});
+      vsDiv.textContent=`vs ${bat.pitcherName||"TBD"} · ${bat.hand||""}`;
+      const statsRow=mk("div",{display:"flex",gap:"10px",marginTop:"6px",flexWrap:"wrap"});
+      const addStat=(l,v,hi)=>{if(!v&&v!==0)return;const s=mk("div",{fontSize:"10px",color:"var(--muted)"});s.innerHTML=`<span style="font-weight:700;color:${hi?'var(--green2)':'var(--text2)'}">${v}</span> ${l}`;statsRow.appendChild(s);};
+      if(bat.bpHRProb!=null)addStat("BP HR",`${Math.round(bat.bpHRProb*100)}%`,bat.bpHRProb>=.15);
+      if(bat.barrelPct)addStat("Barrel",`${bat.barrelPct}%`,parseFloat(bat.barrelPct)>=13);
+      if(bat.hrFbPct)addStat("HR/FB",`${bat.hrFbPct}%`,parseFloat(bat.hrFbPct)>=22);
+      const pitS=bat.grade?.B?.pitcher?.s||0;
+      if(pitS>0)addStat("Pit Vuln",`${pitS}/24`,pitS>=16);
+      const reasonDiv=mk("div",{fontSize:"10px",color:"var(--muted)",marginTop:"5px",fontStyle:"italic"});
+      reasonDiv.textContent=getParlayPickReason(bat);
+      info.appendChild(nameDiv);info.appendChild(vsDiv);info.appendChild(statsRow);info.appendChild(reasonDiv);
+      const pct=bat.normalizedPct??bat.grade?.pct??0;
+      const pctDiv=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"16px",color:tc,flexShrink:"0",textAlign:"right"});
+      pctDiv.innerHTML=`${Math.round(pct*100)}%<div style="font-size:9px;font-weight:400;color:var(--muted);margin-top:1px">grade</div>`;
+      leg.appendChild(tierBadge);leg.appendChild(info);leg.appendChild(pctDiv);
+      card.appendChild(leg);
+    });
+    c.appendChild(card);
+  });
+
+  const disc=mk("div",{fontSize:"10px",color:"var(--muted)",textAlign:"center",padding:"10px 0 20px",lineHeight:"1.6"});
+  disc.textContent="Parlays are AI-generated from your graded board. All bets carry risk — use as guidance only.";
+  c.appendChild(disc);
 }
 
 // ── BOOT ──────────────────────────────────────────────────────────────────
