@@ -2632,6 +2632,60 @@ function mkSlateRow(b){
   return row;
 }
 
+// ── FG PARLAY HELPERS ────────────────────────────────────────────────────
+function getFGGameKey(fg){
+  // Cross-ref board then slate for pitcher, so we know same-game opponents
+  const bm=S.batters.find(b=>matchBatterName(b.name,fg.name));
+  if(bm?.pitcherName)return bm.pitcherName.toLowerCase().trim();
+  const sm=S.slate.find(b=>matchBatterName(b.name,fg.name));
+  if(sm?.pitcherName)return sm.pitcherName.toLowerCase().trim();
+  return(fg.team||fg.name).toLowerCase().trim();
+}
+
+function generateFGParlays(fgBatters){
+  if(fgBatters.length<2)return[];
+  const usedRanks=new Set();
+  const annotated=fgBatters.map(fg=>({...fg,_gameKey:getFGGameKey(fg)}));
+
+  function pick(pool,n,sortFn){
+    const src=sortFn?[...pool].sort(sortFn):pool;
+    const usedGames=new Set(),res=[];
+    for(const fg of src){
+      if(res.length>=n)break;
+      if(usedRanks.has(fg.fgRank)||usedGames.has(fg._gameKey))continue;
+      res.push(fg);usedGames.add(fg._gameKey);
+    }
+    return res;
+  }
+  function commit(legs){legs.forEach(fg=>usedRanks.add(fg.fgRank));}
+
+  const parlays=[];
+
+  // 1. 3-leg: Elite only, best score, different games
+  const eliteLegs=pick(annotated.filter(fg=>fg.fgTier.tier==="🔥 Elite"),3);
+  if(eliteLegs.length>=2){parlays.push({name:"🔥 Elite Power",desc:"All 5 minimums met — best HR profiles available",legs:eliteLegs});commit(eliteLegs);}
+
+  // 2. 3-leg: Favorable or better from remaining
+  const favLegs=pick(annotated.filter(fg=>["🔥 Elite","✅ Favorable"].includes(fg.fgTier.tier)),3);
+  if(favLegs.length>=2){parlays.push({name:"✅ Favorable Focus",desc:"Strong qualifying profiles, separate matchups",legs:favLegs});commit(favLegs);}
+
+  // 3. 3-leg: Best composite score from remaining
+  const bestLegs=pick(annotated,3,(a,b)=>b.fgScore-a.fgScore);
+  if(bestLegs.length>=2){parlays.push({name:"⚡ Top Score",desc:"Highest FanGraphs composite score — fresh picks",legs:bestLegs});commit(bestLegs);}
+
+  // 4. 3-leg: Mid-ranked sleepers (ranks 4-14)
+  const sleepLegs=pick(annotated.slice(3,13),3);
+  if(sleepLegs.length>=2){parlays.push({name:"✨ Hidden Gems",desc:"Mid-board picks with solid power profiles",legs:sleepLegs});commit(sleepLegs);}
+
+  // 5. 4-5 leg power parlay from remaining
+  const pwrLegs=pick(annotated,5);
+  const pwrN=Math.min(pwrLegs.length,5);
+  if(pwrN>=4){parlays.push({name:`💰 Power ${pwrN}-Leg`,desc:`${pwrN} picks from separate games for max payout`,legs:pwrLegs.slice(0,pwrN)});commit(pwrLegs);}
+  else if(pwrLegs.length>=2){parlays.push({name:"🛡 Best Remaining",desc:"Top available picks from separate games",legs:pwrLegs});commit(pwrLegs);}
+
+  return parlays.slice(0,5);
+}
+
 // ── PARLAY ────────────────────────────────────────────────────────────────
 function getParlayPickReason(bat){
   const b=bat.grade?.B;if(!b)return"High composite grade";
@@ -2725,75 +2779,127 @@ function generateParlays(sorted){
   return parlays.slice(0,5);
 }
 
+// Shared parlay card renderer — used for both board and FG parlays
+function mkParlayCard(parlay, pi, prefix, renderLeg){
+  const card=mk("div",{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"18px",padding:"18px",marginBottom:"12px"});
+  const phdr=mk("div",{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"});
+  const pnum=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"22px",color:"var(--amber)",flexShrink:"0"});
+  pnum.textContent=`${prefix}${pi+1}`;
+  const pinfo=mk("div",{flex:"1"});
+  const pname=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"17px",color:"var(--text)"});
+  pname.textContent=parlay.name;
+  const pdesc=mk("div",{fontSize:"11px",color:"var(--muted)",marginTop:"1px"});
+  pdesc.textContent=parlay.desc;
+  pinfo.appendChild(pname);pinfo.appendChild(pdesc);
+  const legBadge=mk("div",{background:"rgba(200,146,42,.12)",border:"1px solid rgba(200,146,42,.3)",borderRadius:"8px",padding:"3px 10px",fontSize:"12px",fontWeight:"700",color:"var(--amber)",flexShrink:"0",fontFamily:"'JetBrains Mono',monospace"});
+  legBadge.textContent=`${parlay.legs.length}-Leg`;
+  phdr.appendChild(pnum);phdr.appendChild(pinfo);phdr.appendChild(legBadge);
+  card.appendChild(phdr);
+  parlay.legs.forEach((leg,li)=>renderLeg(card,leg,li));
+  return card;
+}
+
 function rParlay(c){
   const hd=mk("div",{marginBottom:"14px"});
   const title=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"20px",color:"var(--text)",marginBottom:"3px"});
   title.textContent="🎰 Mutts AI Parlay";
   const sub=mk("div",{fontSize:"12px",color:"var(--muted)",marginBottom:"14px",lineHeight:"1.5"});
-  sub.textContent="5 unique parlays from your board — no same-game players, no repeated picks across parlays.";
+  sub.textContent="Board parlays + FanGraphs parlays — no same-game players, no repeated picks.";
   hd.appendChild(title);hd.appendChild(sub);c.appendChild(hd);
 
+  // ── Board parlays ──────────────────────────────────────────────────────
   const sorted=[...S.batters].filter(b=>b.grade).sort((a,b)=>(b.normalizedPct||b.grade?.pct||0)-(a.normalizedPct||a.grade?.pct||0));
-  if(sorted.length<2){
-    const empty=mk("div",{textAlign:"center",color:"var(--muted)",padding:"40px 20px",fontSize:"14px",lineHeight:"1.8"});
-    empty.innerHTML="No board data yet.<br>Import BallparkPal from the <strong style='color:var(--text)'>Board</strong> tab to populate picks.";
-    c.appendChild(empty);return;
+
+  if(sorted.length>=2){
+    const boardHdr=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"15px",color:"var(--text2)",marginBottom:"10px",letterSpacing:".05em"});
+    boardHdr.textContent="📊 BOARD PARLAYS";
+    c.appendChild(boardHdr);
+
+    generateParlays(sorted).forEach((parlay,pi)=>{
+      c.appendChild(mkParlayCard(parlay,pi,"P",(card,bat,li)=>{
+        const tier=bat.grade?.tier||"LEAN";
+        const isFire=tier==="FIRE",isLean=tier==="LEAN";
+        const tc=isFire?"#5cb870":isLean?"#e8a830":"var(--muted)";
+        const tbg=isFire?"rgba(82,194,120,.12)":isLean?"rgba(200,146,42,.12)":"rgba(120,120,120,.08)";
+        const risk=bat._risk??getBatterRisk(bat);
+        const riskIcon=risk<=1?"🟢":risk<=2?"🟡":"🔴";
+        const riskLabel=risk<=1?"Consistent":risk<=2?"Moderate":"Volatile";
+        const leg=mk("div",{display:"flex",alignItems:"flex-start",gap:"10px",padding:"10px 0",borderTop:li===0?"none":"1px solid var(--border)"});
+        const tierBadge=mk("div",{background:tbg,border:`1px solid ${tc}`,borderRadius:"8px",padding:"4px 8px",fontSize:"11px",fontWeight:"800",color:tc,flexShrink:"0",fontFamily:"'Rajdhani',sans-serif",letterSpacing:".04em"});
+        tierBadge.textContent=isFire?"🔥 FIRE":isLean?"✅ LEAN":tier;
+        const info=mk("div",{flex:"1",minWidth:"0"});
+        const nameDiv=mk("div",{fontWeight:"700",fontSize:"14px",color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
+        nameDiv.textContent=bat.name;
+        const vsDiv=mk("div",{fontSize:"11px",color:"var(--muted)",marginTop:"2px",display:"flex",alignItems:"center",gap:"6px"});
+        vsDiv.innerHTML=`<span>vs ${bat.pitcherName||"TBD"} · ${bat.hand||""}</span><span style="font-size:10px">${riskIcon} ${riskLabel}</span>`;
+        const statsRow=mk("div",{display:"flex",gap:"10px",marginTop:"6px",flexWrap:"wrap"});
+        const addStat=(l,v,hi)=>{if(!v&&v!==0)return;const s=mk("div",{fontSize:"10px",color:"var(--muted)"});s.innerHTML=`<span style="font-weight:700;color:${hi?'var(--green2)':'var(--text2)'}">${v}</span> ${l}`;statsRow.appendChild(s);};
+        if(bat.bpHRProb!=null)addStat("BP HR",`${Math.round(bat.bpHRProb*100)}%`,bat.bpHRProb>=.15);
+        if(bat.barrelPct)addStat("Barrel",`${bat.barrelPct}%`,parseFloat(bat.barrelPct)>=13);
+        if(bat.hrFbPct)addStat("HR/FB",`${bat.hrFbPct}%`,parseFloat(bat.hrFbPct)>=22);
+        const pitS=bat.grade?.B?.pitcher?.s||0;
+        if(pitS>0)addStat("Pit Vuln",`${pitS}/24`,pitS>=16);
+        const reasonDiv=mk("div",{fontSize:"10px",color:"var(--muted)",marginTop:"5px",fontStyle:"italic"});
+        reasonDiv.textContent=getParlayPickReason(bat);
+        info.appendChild(nameDiv);info.appendChild(vsDiv);info.appendChild(statsRow);info.appendChild(reasonDiv);
+        const pct=bat.normalizedPct??bat.grade?.pct??0;
+        const pctDiv=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"16px",color:tc,flexShrink:"0",textAlign:"right"});
+        pctDiv.innerHTML=`${Math.round(pct*100)}%<div style="font-size:9px;font-weight:400;color:var(--muted);margin-top:1px">grade</div>`;
+        leg.appendChild(tierBadge);leg.appendChild(info);leg.appendChild(pctDiv);
+        card.appendChild(leg);
+      }));
+    });
+  } else {
+    const empty=mk("div",{textAlign:"center",color:"var(--muted)",padding:"24px 20px",fontSize:"13px",lineHeight:"1.8",background:"var(--card2)",border:"1px solid var(--border)",borderRadius:"14px",marginBottom:"16px"});
+    empty.innerHTML="No board data yet — import BallparkPal from the <strong style='color:var(--text)'>Board</strong> tab for board parlays.";
+    c.appendChild(empty);
   }
 
-  generateParlays(sorted).forEach((parlay,pi)=>{
-    const card=mk("div",{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"18px",padding:"18px",marginBottom:"12px"});
-    // Header
-    const phdr=mk("div",{display:"flex",alignItems:"center",gap:"10px",marginBottom:"12px"});
-    const pnum=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"22px",color:"var(--amber)",flexShrink:"0"});
-    pnum.textContent=`P${pi+1}`;
-    const pinfo=mk("div",{flex:"1"});
-    const pname=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"17px",color:"var(--text)"});
-    pname.textContent=parlay.name;
-    const pdesc=mk("div",{fontSize:"11px",color:"var(--muted)",marginTop:"1px"});
-    pdesc.textContent=parlay.desc;
-    pinfo.appendChild(pname);pinfo.appendChild(pdesc);
-    const legBadge=mk("div",{background:"rgba(200,146,42,.12)",border:"1px solid rgba(200,146,42,.3)",borderRadius:"8px",padding:"3px 10px",fontSize:"12px",fontWeight:"700",color:"var(--amber)",flexShrink:"0",fontFamily:"'JetBrains Mono',monospace"});
-    legBadge.textContent=`${parlay.legs.length}-Leg`;
-    phdr.appendChild(pnum);phdr.appendChild(pinfo);phdr.appendChild(legBadge);
-    card.appendChild(phdr);
+  // ── FanGraphs parlays ──────────────────────────────────────────────────
+  const fgDivider=mk("div",{display:"flex",alignItems:"center",gap:"10px",margin:"20px 0 12px"});
+  const fgLine1=mk("div",{flex:"1",height:"1px",background:"var(--border)"});
+  const fgLabel=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"15px",color:"#60c0ff",letterSpacing:".05em",flexShrink:"0"});
+  fgLabel.textContent="⚡ FANGRAPHS PARLAYS";
+  const fgLine2=mk("div",{flex:"1",height:"1px",background:"var(--border)"});
+  fgDivider.appendChild(fgLine1);fgDivider.appendChild(fgLabel);fgDivider.appendChild(fgLine2);
+  c.appendChild(fgDivider);
 
-    parlay.legs.forEach((bat,li)=>{
-      const tier=bat.grade?.tier||"LEAN";
-      const isFire=tier==="FIRE",isLean=tier==="LEAN";
-      const tc=isFire?"#5cb870":isLean?"#e8a830":"var(--muted)";
-      const tbg=isFire?"rgba(82,194,120,.12)":isLean?"rgba(200,146,42,.12)":"rgba(120,120,120,.08)";
-      const risk=bat._risk??getBatterRisk(bat);
-      const riskIcon=risk<=1?"🟢":risk<=2?"🟡":"🔴";
-      const riskLabel=risk<=1?"Consistent":risk<=2?"Moderate":"Volatile";
-      const leg=mk("div",{display:"flex",alignItems:"flex-start",gap:"10px",padding:"10px 0",borderTop:li===0?"none":"1px solid var(--border)"});
-      const tierBadge=mk("div",{background:tbg,border:`1px solid ${tc}`,borderRadius:"8px",padding:"4px 8px",fontSize:"11px",fontWeight:"800",color:tc,flexShrink:"0",fontFamily:"'Rajdhani',sans-serif",letterSpacing:".04em"});
-      tierBadge.textContent=isFire?"🔥 FIRE":isLean?"✅ LEAN":tier;
-      const info=mk("div",{flex:"1",minWidth:"0"});
-      const nameDiv=mk("div",{fontWeight:"700",fontSize:"14px",color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
-      nameDiv.textContent=bat.name;
-      const vsDiv=mk("div",{fontSize:"11px",color:"var(--muted)",marginTop:"2px",display:"flex",alignItems:"center",gap:"6px"});
-      vsDiv.innerHTML=`<span>vs ${bat.pitcherName||"TBD"} · ${bat.hand||""}</span><span style="font-size:10px">${riskIcon} ${riskLabel}</span>`;
-      const statsRow=mk("div",{display:"flex",gap:"10px",marginTop:"6px",flexWrap:"wrap"});
-      const addStat=(l,v,hi)=>{if(!v&&v!==0)return;const s=mk("div",{fontSize:"10px",color:"var(--muted)"});s.innerHTML=`<span style="font-weight:700;color:${hi?'var(--green2)':'var(--text2)'}">${v}</span> ${l}`;statsRow.appendChild(s);};
-      if(bat.bpHRProb!=null)addStat("BP HR",`${Math.round(bat.bpHRProb*100)}%`,bat.bpHRProb>=.15);
-      if(bat.barrelPct)addStat("Barrel",`${bat.barrelPct}%`,parseFloat(bat.barrelPct)>=13);
-      if(bat.hrFbPct)addStat("HR/FB",`${bat.hrFbPct}%`,parseFloat(bat.hrFbPct)>=22);
-      const pitS=bat.grade?.B?.pitcher?.s||0;
-      if(pitS>0)addStat("Pit Vuln",`${pitS}/24`,pitS>=16);
-      const reasonDiv=mk("div",{fontSize:"10px",color:"var(--muted)",marginTop:"5px",fontStyle:"italic"});
-      reasonDiv.textContent=getParlayPickReason(bat);
-      info.appendChild(nameDiv);info.appendChild(vsDiv);info.appendChild(statsRow);info.appendChild(reasonDiv);
-      const pct=bat.normalizedPct??bat.grade?.pct??0;
-      const pctDiv=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"16px",color:tc,flexShrink:"0",textAlign:"right"});
-      pctDiv.innerHTML=`${Math.round(pct*100)}%<div style="font-size:9px;font-weight:400;color:var(--muted);margin-top:1px">grade</div>`;
-      leg.appendChild(tierBadge);leg.appendChild(info);leg.appendChild(pctDiv);
-      card.appendChild(leg);
+  if(S.fgBatters.length<2){
+    const fgEmpty=mk("div",{textAlign:"center",color:"var(--muted)",padding:"24px 20px",fontSize:"13px",lineHeight:"1.8",background:"var(--card2)",border:"1px solid var(--border)",borderRadius:"14px"});
+    fgEmpty.innerHTML="Import FanGraphs CSV from the <strong style='color:var(--text)'>Board</strong> tab to generate FanGraphs parlays.";
+    c.appendChild(fgEmpty);
+  } else {
+    generateFGParlays(S.fgBatters).forEach((parlay,pi)=>{
+      c.appendChild(mkParlayCard(parlay,pi,"F",(card,fg,li)=>{
+        const t=fg.fgTier;
+        const leg=mk("div",{display:"flex",alignItems:"flex-start",gap:"10px",padding:"10px 0",borderTop:li===0?"none":"1px solid var(--border)"});
+        const tierBadge=mk("div",{background:t.bg,border:`1px solid ${t.color}`,borderRadius:"8px",padding:"4px 8px",fontSize:"11px",fontWeight:"800",color:t.color,flexShrink:"0",fontFamily:"'Rajdhani',sans-serif",letterSpacing:".04em"});
+        tierBadge.textContent=t.tier;
+        const info=mk("div",{flex:"1",minWidth:"0"});
+        const nameDiv=mk("div",{fontWeight:"700",fontSize:"14px",color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
+        nameDiv.textContent=fg.name;
+        const gameDiv=mk("div",{fontSize:"11px",color:"var(--muted)",marginTop:"2px"});
+        const gk=fg._gameKey||(fg.team||'');
+        const knownPitcher=S.batters.find(b=>matchBatterName(b.name,fg.name))?.pitcherName;
+        gameDiv.textContent=knownPitcher?`vs ${knownPitcher} · ${fg.team||''}`:(fg.team?`Team: ${fg.team}`:'');
+        const statsRow=mk("div",{display:"flex",gap:"8px",marginTop:"6px",flexWrap:"wrap"});
+        const addS=(l,v,hi)=>{const s=mk("div",{fontSize:"10px",color:"var(--muted)"});s.innerHTML=`<span style="font-weight:700;color:${hi?'var(--green2)':'var(--text2)'}">${v}</span> ${l}`;statsRow.appendChild(s);};
+        addS("Barrel",`${Math.round(fg.barrelPct*100)}%`,fg.barrelPct>=FG_MIN.barrelPct);
+        addS("EV",`${fg.ev.toFixed(1)}`,fg.ev>=FG_MIN.ev);
+        addS("BatSpd",`${fg.batSpd.toFixed(1)}`,fg.batSpd>=FG_MIN.batSpd);
+        addS("AtkAng",`${Math.round(fg.idealAtkAngPct*100)}%`,fg.idealAtkAngPct>=FG_MIN.idealAtkAngPct);
+        addS("Pull",`${Math.round(fg.pullPct*100)}%`,fg.pullPct>=FG_MIN.pullPct);
+        info.appendChild(nameDiv);info.appendChild(gameDiv);info.appendChild(statsRow);
+        const metDiv=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"14px",color:t.color,flexShrink:"0",textAlign:"right"});
+        metDiv.innerHTML=`${fg.fgTier.met}/5<div style="font-size:9px;font-weight:400;color:var(--muted);margin-top:1px">criteria</div>`;
+        leg.appendChild(tierBadge);leg.appendChild(info);leg.appendChild(metDiv);
+        card.appendChild(leg);
+      }));
     });
-    c.appendChild(card);
-  });
+  }
 
   const disc=mk("div",{fontSize:"10px",color:"var(--muted)",textAlign:"center",padding:"10px 0 20px",lineHeight:"1.6"});
-  disc.textContent="Parlays are AI-generated from your graded board. All bets carry risk — use as guidance only.";
+  disc.textContent="All parlays are AI-generated suggestions. All bets carry risk — use as guidance only.";
   c.appendChild(disc);
 }
 
