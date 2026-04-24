@@ -2899,7 +2899,11 @@ function rParlay(c){
     fgEmpty.innerHTML="Import FanGraphs CSV from the <strong style='color:var(--text)'>Board</strong> tab to generate FanGraphs parlays.";
     c.appendChild(fgEmpty);
   } else {
-    generateFGParlays(S.fgBatters).forEach((parlay,pi)=>{
+    // Apply safety net — only use FG players confirmed playing today
+    const fgForParlays=S.slate.length>0
+      ?S.fgBatters.filter(fg=>S.slate.some(b=>matchBatterName(b.name,fg.name)))
+      :S.fgBatters;
+    generateFGParlays(fgForParlays).forEach((parlay,pi)=>{
       c.appendChild(mkParlayCard(parlay,pi,"F",(card,fg,li)=>{
         const t=fg.fgTier;
         const leg=mk("div",{display:"flex",alignItems:"flex-start",gap:"10px",padding:"10px 0",borderTop:li===0?"none":"1px solid var(--border)"});
