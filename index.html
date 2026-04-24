@@ -293,7 +293,7 @@ let W={
 const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
 // ── STATE ─────────────────────────────────────────────────────────────────
-let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:"",batterStats:{}};
+let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:"",batterStats:{},fgBatters:[]};
 let BF={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10),odds:""};
 let PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip",weakLineupSpots:""};
 
@@ -922,14 +922,75 @@ function rBoard(c){
     e.appendChild(btn);c.appendChild(e);return;
   }
 
-  // Board toolbar: re-import BallparkPal
-  const tbRow=mk("div",{display:"flex",justifyContent:"flex-end",marginBottom:"10px",gap:"7px"});
+  // Board toolbar
+  const tbRow=mk("div",{display:"flex",justifyContent:"flex-end",marginBottom:"10px",gap:"7px",flexWrap:"wrap"});
   const bpTb=el("button","btn-sm","🅱️ Re-import BallparkPal");
   bpTb.onclick=()=>triggerBpImport();
   tbRow.appendChild(bpTb);
+  const fgTb=el("button","btn-sm","⚡ Import FanGraphs");
+  fgTb.onclick=()=>triggerFGImport();
+  tbRow.appendChild(fgTb);
+  if(S.fgBatters.length){
+    const fgClear=el("button","btn-sm","✕ Clear FG");
+    fgClear.style.cssText="color:var(--muted);font-size:11px;";
+    fgClear.onclick=()=>{S.fgBatters=[];render();};
+    tbRow.appendChild(fgClear);
+  }
   c.appendChild(tbRow);
 
   sorted.forEach((b,i)=>c.appendChild(mkCard(b,i+1)));
+
+  // FanGraphs top 20 panel
+  if(S.fgBatters.length){
+    const boardNames=new Set(S.batters.map(b=>normName(b.name)));
+    const panel=mk("div",{background:"var(--card2)",border:"1px solid var(--border)",borderRadius:"16px",padding:"16px",marginTop:"16px"});
+    const phdr=mk("div",{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"});
+    const ptitle=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"17px",color:"var(--text)",flex:"1"});
+    ptitle.textContent="⚡ FanGraphs Power Rankings (2-wk)";
+    const psub=mk("div",{fontSize:"10px",color:"var(--muted)",fontWeight:"400"});
+    psub.textContent="Barrel · EV · Bat Speed · Attack Angle · Pull%";
+    phdr.appendChild(ptitle);
+    panel.appendChild(phdr);
+    panel.appendChild(psub);
+    const metaRow=mk("div",{display:"flex",gap:"6px",marginBottom:"10px",flexWrap:"wrap"});
+    const consensus=S.fgBatters.filter(fg=>boardNames.has(normName(fg.name)));
+    [
+      {l:`${S.fgBatters.length} Ranked`,c:"var(--text)"},
+      {l:`${consensus.length} Consensus`,c:"#60c0ff"},
+    ].forEach(({l,c:col})=>{
+      const badge=mk("div",{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"7px",padding:"3px 9px",fontSize:"11px",fontWeight:"700",color:col});
+      badge.textContent=l;metaRow.appendChild(badge);
+    });
+    panel.appendChild(metaRow);
+    S.fgBatters.forEach(fg=>{
+      const inBoard=boardNames.has(normName(fg.name));
+      const row=mk("div",{display:"flex",alignItems:"center",gap:"8px",padding:"8px 0",borderTop:"1px solid var(--border)"});
+      const rankBadge=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"13px",color:inBoard?"#60c0ff":"var(--muted)",width:"28px",flexShrink:"0",textAlign:"center"});
+      rankBadge.textContent=`#${fg.fgRank}`;
+      const info=mk("div",{flex:"1",minWidth:"0"});
+      const nameRow=mk("div",{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"});
+      const nm=mk("div",{fontWeight:"700",fontSize:"13px",color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
+      nm.textContent=fg.name;
+      nameRow.appendChild(nm);
+      if(inBoard){
+        const cb=mk("div",{background:"rgba(96,192,255,.12)",border:"1px solid rgba(96,192,255,.35)",borderRadius:"5px",padding:"1px 6px",fontSize:"9px",fontWeight:"800",color:"#60c0ff",flexShrink:"0"});
+        cb.textContent="🎯 CONSENSUS";nameRow.appendChild(cb);
+      }
+      const stats=mk("div",{fontSize:"10px",color:"var(--muted)",marginTop:"2px"});
+      const barPct=Math.round(fg.barrelPct*100);
+      const ataPct=Math.round(fg.idealAtkAngPct*100);
+      const pullPct=Math.round(fg.pullPct*100);
+      stats.textContent=`EV ${fg.ev.toFixed(1)} · Barrel ${barPct}% · BatSpd ${fg.batSpd.toFixed(1)} · AtkAng ${ataPct}% · Pull ${pullPct}%`;
+      info.appendChild(nameRow);info.appendChild(stats);
+      const scoreDiv=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"14px",color:inBoard?"#60c0ff":"var(--text2)",flexShrink:"0"});
+      scoreDiv.textContent=`${Math.round(fg.fgScore*100)}`;
+      const scoreLabel=mk("div",{fontSize:"9px",color:"var(--muted)",textAlign:"right"});scoreLabel.textContent="/100";
+      const scoreWrap=mk("div",{textAlign:"right"});scoreWrap.appendChild(scoreDiv);scoreWrap.appendChild(scoreLabel);
+      row.appendChild(rankBadge);row.appendChild(info);row.appendChild(scoreWrap);
+      panel.appendChild(row);
+    });
+    c.appendChild(panel);
+  }
 }
 
 function mkCard(bat,rank){
@@ -949,6 +1010,7 @@ function mkCard(bat,rank){
   const handCol=bat.hand==="LHB"?"#4a7fa8":bat.hand==="RHB"?"#c8922a":"#5cb870";
   const lineupCol=bat.lineupSpot&&parseInt(bat.lineupSpot)<=3?"#5cb870":bat.lineupSpot&&parseInt(bat.lineupSpot)<=5?"#c8922a":"#7a6848";
 
+  const fgMatch=S.fgBatters.find(fg=>matchBatterName(fg.name,bat.name));
   const hdr=el("div","grade-hdr");
   hdr.innerHTML=`
     <div class="ring">
@@ -963,6 +1025,7 @@ function mkCard(bat,rank){
     <div style="flex:1;min-width:0;">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
         ${rank?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(96,192,255,.12);color:#60c0ff;flex-shrink:0">#${rank}</span>`:''}
+        ${fgMatch?`<span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(96,192,255,.15);color:#60c0ff;flex-shrink:0;border:1px solid rgba(96,192,255,.3)">⚡FG#${fgMatch.fgRank}</span>`:''}
         <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:17px;color:var(--text)">${bat.name}</span>
         ${bat.hand?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${handCol}20;color:${handCol}">${bat.hand}</span>`:""}
         ${bat.lineupSpot?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${lineupCol}20;color:${lineupCol}">Spot ${bat.lineupSpot}</span>`:""}
@@ -2056,6 +2119,66 @@ function buildBoardFromBP(players){
       if(cnt<3)acc.push(b);
       return acc;
     },[]);
+}
+
+// ── FANGRAPHS IMPORT ─────────────────────────────────────────────────────
+function scoreFGBatter(b){
+  // b.barrelPct / pullPct / idealAtkAngPct are raw decimals (0.15 = 15%)
+  // b.ev / b.batSpd are mph
+  function pts(val,t){
+    return val>=t[0]?1:val>=t[1]?.82:val>=t[2]?.60:val>=t[3]?.38:.12;
+  }
+  const evS  =pts(b.ev,          [93,91,89,87]);
+  const barS =pts(b.barrelPct,   [.15,.10,.06,.03]);
+  const spdS =pts(b.batSpd,      [78,76,73,70]);
+  const ataS =pts(b.idealAtkAngPct,[.78,.68,.57,.45]);
+  const pulS =pts(b.pullPct,     [.48,.42,.35,.28]);
+  // Barrel 30% · EV 25% · BatSpd 20% · AttackAngle 15% · Pull 10%
+  return barS*.30 + evS*.25 + spdS*.20 + ataS*.15 + pulS*.10;
+}
+
+function importFGCSV(file){
+  const reader=new FileReader();
+  reader.onerror=()=>toast('⚠️ File read error',5000);
+  reader.onload=ev=>{
+    const {rows,headers}=parseCSV(ev.target.result);
+    if(!rows.length){toast('⚠️ No data in FanGraphs CSV',5000);return;}
+    const h=k=>headers.includes(k);
+    const nameKey=h('NAME')?'NAME':h('NAMEASCII')?'NAMEASCII':null;
+    if(!nameKey){toast('⚠️ No Name column found in FanGraphs CSV',5000);return;}
+    const col=k=>h(k)?k:null;
+    const evKey=col('EV'),barKey=col('BARREL%'),spdKey=col('BATSPD'),ataKey=col('IDEALATKANG%'),pullKey=col('PULL%'),teamKey=col('TEAM');
+    const batters=rows.filter(r=>r[nameKey]?.trim()).map(r=>{
+      const name=r[nameKey].trim();
+      const team=teamKey?r[teamKey]?.trim():'';
+      const ev=parseFloat(r[evKey])||0;
+      const barrelPct=parseFloat(r[barKey])||0;
+      const batSpd=parseFloat(r[spdKey])||0;
+      const idealAtkAngPct=parseFloat(r[ataKey])||0;
+      const pullPct=parseFloat(r[pullKey])||0;
+      const fgScore=scoreFGBatter({ev,barrelPct,batSpd,idealAtkAngPct,pullPct});
+      return{name,team,ev,barrelPct,batSpd,idealAtkAngPct,pullPct,fgScore};
+    }).filter(b=>b.fgScore>0.15); // drop rows with no meaningful data
+    if(!batters.length){toast('⚠️ No valid rows parsed — check column headers',5000);return;}
+    batters.sort((a,b)=>b.fgScore-a.fgScore);
+    S.fgBatters=batters.slice(0,20).map((b,i)=>({...b,fgRank:i+1}));
+    render();
+    toast(`✅ FanGraphs: top ${S.fgBatters.length} power hitters ranked`);
+  };
+  reader.readAsText(file);
+}
+
+function triggerFGImport(){
+  const fi=document.createElement('input');
+  fi.type='file';fi.accept='.csv,.txt';
+  fi.style.cssText='position:fixed;top:-9999px;left:-9999px;opacity:0;';
+  fi.onchange=e=>{
+    const file=e.target.files[0];
+    document.body.removeChild(fi);
+    if(!file)return;
+    importFGCSV(file);
+  };
+  document.body.appendChild(fi);fi.click();
 }
 
 function mkBpImportBtn(card){
