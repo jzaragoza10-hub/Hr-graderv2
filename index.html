@@ -296,7 +296,7 @@ let W={
 const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
 // ── STATE ─────────────────────────────────────────────────────────────────
-let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:"",batterStats:{},fgBatters:[],fgFilter:"All"};
+let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:"",batterStats:{},fgBatters:[],fgFilter:"All",bpAllNames:[]};
 let BF={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10),odds:""};
 let PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip",weakLineupSpots:""};
 
@@ -958,10 +958,10 @@ function rBoard(c){
     legWrap.innerHTML=`Min: <span style="color:var(--text2)">Barrel≥15%</span> · <span style="color:var(--text2)">EV≥90</span> · <span style="color:var(--text2)">BatSpd≥69</span> · <span style="color:var(--text2)">AtkAng≥55%</span> · <span style="color:var(--text2)">Pull≥40%</span>`;
     panel.appendChild(legWrap);
 
-    // Safety net: filter FG list to today's slate players
-    const fgSafetyNet=S.slate.length>0?new Set(S.slate.map(b=>normName(b.name))):null;
+    // Safety net: filter FG list to today's players (slate > BP pool > no filter)
+    const fgSafetyNet=getTodayNames();
     const fgToday=fgSafetyNet?S.fgBatters.filter(fg=>fgSafetyNet.has(normName(fg.name))):S.fgBatters;
-    if(fgSafetyNet){
+    if(fgSafetyNet&&fgToday.length<S.fgBatters.length){
       const snBadge=mk("div",{display:"flex",alignItems:"center",gap:"6px",background:"rgba(82,194,120,.06)",border:"1px solid rgba(82,194,120,.25)",borderRadius:"8px",padding:"5px 10px",marginBottom:"8px",fontSize:"10px",color:"var(--green2)"});
       snBadge.innerHTML=`🛡 <strong>Safety Net:</strong> showing ${fgToday.length} of ${S.fgBatters.length} players confirmed playing today`;
       panel.appendChild(snBadge);
@@ -2089,6 +2089,8 @@ function triggerBpImport(){
 
 function processBpPlayers(players){
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
+  // Store full BP pool as "playing today" fallback (used when slate CSV not yet imported)
+  S.bpAllNames=players.map(p=>normName(p.name));
   let top20;
   try{
     players.forEach(p=>{
@@ -2134,12 +2136,18 @@ function processBpPlayers(players){
   }
 }
 
+function getTodayNames(){
+  // Priority: prop finder slate > BallparkPal full pool > no filter
+  if(S.slate.length>0)return new Set(S.slate.map(b=>normName(b.name)));
+  if(S.bpAllNames.length>0)return new Set(S.bpAllNames);
+  return null;
+}
+
 function buildBoardFromBP(players){
   const today=new Date().toISOString().slice(0,10);
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
   const BP_MIN=0.08; // minimum BallparkPal HR probability to qualify for top 20 (8%+)
-  // Safety net: if prop finder (slate) data is loaded, only allow confirmed today's players
-  const safetyNet=S.slate.length>0?new Set(S.slate.map(b=>normName(b.name))):null;
+  const safetyNet=getTodayNames();
   return players.filter(p=>(p.bpHRProb||0)>=BP_MIN)
     .filter(p=>!safetyNet||safetyNet.has(normName(p.name)))
     .map(p=>{
@@ -2899,9 +2907,10 @@ function rParlay(c){
     fgEmpty.innerHTML="Import FanGraphs CSV from the <strong style='color:var(--text)'>Board</strong> tab to generate FanGraphs parlays.";
     c.appendChild(fgEmpty);
   } else {
-    // Apply safety net — only use FG players confirmed playing today
-    const fgForParlays=S.slate.length>0
-      ?S.fgBatters.filter(fg=>S.slate.some(b=>matchBatterName(b.name,fg.name)))
+    // Apply safety net — only use FG players confirmed playing today (slate > BP pool > no filter)
+    const _fgTodayNames=getTodayNames();
+    const fgForParlays=_fgTodayNames
+      ?S.fgBatters.filter(fg=>_fgTodayNames.has(normName(fg.name)))
       :S.fgBatters;
     generateFGParlays(fgForParlays).forEach((parlay,pi)=>{
       c.appendChild(mkParlayCard(parlay,pi,"F",(card,fg,li)=>{
