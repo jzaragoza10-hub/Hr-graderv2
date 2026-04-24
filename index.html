@@ -890,6 +890,13 @@ function rBoard(c){
   });
   c.appendChild(fr);
 
+  // Safety net status banner
+  if(S.slate.length>0){
+    const snBar=mk("div",{display:"flex",alignItems:"center",gap:"8px",background:"rgba(82,194,120,.06)",border:"1px solid rgba(82,194,120,.25)",borderRadius:"10px",padding:"7px 12px",marginBottom:"8px",fontSize:"11px",color:"var(--green2)"});
+    snBar.innerHTML=`<span>🛡</span><span style="flex:1"><strong>Safety Net Active</strong> — only players confirmed in today's prop finder data are shown</span>`;
+    c.appendChild(snBar);
+  }
+
   // Toolbar (always shown — FG import available even without board picks)
   const tbRow=mk("div",{display:"flex",justifyContent:"flex-end",marginBottom:"10px",gap:"7px",flexWrap:"wrap"});
   const bpTb=el("button","btn-sm",S.batters.length?"🅱️ Re-import BallparkPal":"🅱️ Import BallparkPal");
@@ -951,12 +958,21 @@ function rBoard(c){
     legWrap.innerHTML=`Min: <span style="color:var(--text2)">Barrel≥15%</span> · <span style="color:var(--text2)">EV≥90</span> · <span style="color:var(--text2)">BatSpd≥69</span> · <span style="color:var(--text2)">AtkAng≥55%</span> · <span style="color:var(--text2)">Pull≥40%</span>`;
     panel.appendChild(legWrap);
 
+    // Safety net: filter FG list to today's slate players
+    const fgSafetyNet=S.slate.length>0?new Set(S.slate.map(b=>normName(b.name))):null;
+    const fgToday=fgSafetyNet?S.fgBatters.filter(fg=>fgSafetyNet.has(normName(fg.name))):S.fgBatters;
+    if(fgSafetyNet){
+      const snBadge=mk("div",{display:"flex",alignItems:"center",gap:"6px",background:"rgba(82,194,120,.06)",border:"1px solid rgba(82,194,120,.25)",borderRadius:"8px",padding:"5px 10px",marginBottom:"8px",fontSize:"10px",color:"var(--green2)"});
+      snBadge.innerHTML=`🛡 <strong>Safety Net:</strong> showing ${fgToday.length} of ${S.fgBatters.length} players confirmed playing today`;
+      panel.appendChild(snBadge);
+    }
+
     // Filter toggle pills (clickable — active pill highlighted)
-    const byTier=t=>S.fgBatters.filter(b=>b.fgTier.tier===t).length;
-    const consensus=S.fgBatters.filter(fg=>boardNames.has(normName(fg.name)));
+    const byTier=t=>fgToday.filter(b=>b.fgTier.tier===t).length;
+    const consensus=fgToday.filter(fg=>boardNames.has(normName(fg.name)));
     const filterRow=mk("div",{display:"flex",gap:"6px",marginBottom:"12px",flexWrap:"wrap"});
     const filters=[
-      {key:"All",          l:`All ${S.fgBatters.length}`,    c:"var(--text2)"},
+      {key:"All",          l:`All ${fgToday.length}`,    c:"var(--text2)"},
       {key:"🔥 Elite",     l:`🔥 Elite ${byTier("🔥 Elite")}`,    c:"#5cb870"},
       {key:"✅ Favorable", l:`✅ Favorable ${byTier("✅ Favorable")}`,c:"#e8a830"},
       {key:"⚠️ Average",  l:`⚠️ Average ${byTier("⚠️ Average")}`, c:"#b89050"},
@@ -978,7 +994,7 @@ function rBoard(c){
     panel.appendChild(filterRow);
 
     // Filtered batter list
-    const visible=S.fgBatters.filter(fg=>{
+    const visible=fgToday.filter(fg=>{
       if(S.fgFilter==="All")return true;
       if(S.fgFilter==="🎯 Consensus")return boardNames.has(normName(fg.name));
       return fg.fgTier.tier===S.fgFilter;
@@ -1977,8 +1993,18 @@ function importBattersCSV(file){
       });
       S.slate=slate;
       S.slateHandFilter="All";S.slatePitcherFilter="";
+      // Safety net: immediately remove board & FG picks not in today's prop finder data
+      const todayNames=new Set(slate.map(b=>normName(b.name)));
+      let removed=0;
+      if(S.batters.length>0){
+        const before=S.batters.length;
+        S.batters=S.batters.filter(b=>todayNames.has(normName(b.name)));
+        removed=before-S.batters.length;
+        if(removed>0)save();
+      }
       S.tab="slate";render();
-      toast(`✅ ${slate.length} batters loaded into Slate`);
+      const safeMsg=removed>0?` · 🛡 Removed ${removed} from board not playing today`:'';
+      toast(`✅ ${slate.length} batters loaded into Slate${safeMsg}`);
     }catch(err){alert("Batter CSV error: "+(err.message||String(err)));}
   };
   r.readAsText(file);
@@ -2112,7 +2138,11 @@ function buildBoardFromBP(players){
   const today=new Date().toISOString().slice(0,10);
   const NO_DATA=new Set(["—","No data","N/A","No pitcher linked","Splits mode"]);
   const BP_MIN=0.08; // minimum BallparkPal HR probability to qualify for top 20 (8%+)
-  return players.filter(p=>(p.bpHRProb||0)>=BP_MIN).map(p=>{
+  // Safety net: if prop finder (slate) data is loaded, only allow confirmed today's players
+  const safetyNet=S.slate.length>0?new Set(S.slate.map(b=>normName(b.name))):null;
+  return players.filter(p=>(p.bpHRProb||0)>=BP_MIN)
+    .filter(p=>!safetyNet||safetyNet.has(normName(p.name)))
+    .map(p=>{
     try{
       const sl=S.slate.find(b=>matchBatterName(b.name,p.name));
       let pit=null;
