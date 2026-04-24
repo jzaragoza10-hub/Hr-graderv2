@@ -944,49 +944,66 @@ function rBoard(c){
   if(S.fgBatters.length){
     const boardNames=new Set(S.batters.map(b=>normName(b.name)));
     const panel=mk("div",{background:"var(--card2)",border:"1px solid var(--border)",borderRadius:"16px",padding:"16px",marginTop:"16px"});
-    const phdr=mk("div",{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"});
-    const ptitle=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"17px",color:"var(--text)",flex:"1"});
+    // Header
+    const ptitle=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"17px",color:"var(--text)",marginBottom:"3px"});
     ptitle.textContent="⚡ FanGraphs Power Rankings (2-wk)";
-    const psub=mk("div",{fontSize:"10px",color:"var(--muted)",fontWeight:"400"});
-    psub.textContent="Barrel · EV · Bat Speed · Attack Angle · Pull%";
-    phdr.appendChild(ptitle);
-    panel.appendChild(phdr);
-    panel.appendChild(psub);
-    const metaRow=mk("div",{display:"flex",gap:"6px",marginBottom:"10px",flexWrap:"wrap"});
+    panel.appendChild(ptitle);
+    // Threshold legend
+    const legWrap=mk("div",{fontSize:"10px",color:"var(--muted)",marginBottom:"10px",lineHeight:"1.6"});
+    legWrap.innerHTML=`Min: <span style="color:var(--text2)">Barrel≥15%</span> · <span style="color:var(--text2)">EV≥90</span> · <span style="color:var(--text2)">BatSpd≥69</span> · <span style="color:var(--text2)">AtkAng≥55%</span> · <span style="color:var(--text2)">Pull≥40%</span>`;
+    panel.appendChild(legWrap);
+    // Summary tier counts
+    const metaRow=mk("div",{display:"flex",gap:"6px",marginBottom:"12px",flexWrap:"wrap"});
+    const byTier=t=>S.fgBatters.filter(b=>b.fgTier.tier===t).length;
     const consensus=S.fgBatters.filter(fg=>boardNames.has(normName(fg.name)));
     [
-      {l:`${S.fgBatters.length} Ranked`,c:"var(--text)"},
-      {l:`${consensus.length} Consensus`,c:"#60c0ff"},
+      {l:`🔥 Elite ${byTier("🔥 Elite")}`,c:"#5cb870"},
+      {l:`✅ Favorable ${byTier("✅ Favorable")}`,c:"#e8a830"},
+      {l:`⚠️ Average ${byTier("⚠️ Average")}`,c:"#b89050"},
+      {l:`⛔ Risky ${byTier("⛔ Risky")}`,c:"#c0392b"},
+      {l:`🎯 Consensus ${consensus.length}`,c:"#60c0ff"},
     ].forEach(({l,c:col})=>{
-      const badge=mk("div",{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"7px",padding:"3px 9px",fontSize:"11px",fontWeight:"700",color:col});
+      const badge=mk("div",{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"7px",padding:"3px 9px",fontSize:"10px",fontWeight:"700",color:col});
       badge.textContent=l;metaRow.appendChild(badge);
     });
     panel.appendChild(metaRow);
+    // Each batter row
     S.fgBatters.forEach(fg=>{
       const inBoard=boardNames.has(normName(fg.name));
-      const row=mk("div",{display:"flex",alignItems:"center",gap:"8px",padding:"8px 0",borderTop:"1px solid var(--border)"});
-      const rankBadge=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"13px",color:inBoard?"#60c0ff":"var(--muted)",width:"28px",flexShrink:"0",textAlign:"center"});
-      rankBadge.textContent=`#${fg.fgRank}`;
-      const info=mk("div",{flex:"1",minWidth:"0"});
-      const nameRow=mk("div",{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"});
-      const nm=mk("div",{fontWeight:"700",fontSize:"13px",color:"var(--text)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
-      nm.textContent=fg.name;
-      nameRow.appendChild(nm);
+      const t=fg.fgTier;
+      const row=mk("div",{background:t.bg,border:`1px solid ${t.border}`,borderRadius:"12px",padding:"10px 12px",marginBottom:"7px"});
+      // Top line: rank + name + tier badge + consensus
+      const topLine=mk("div",{display:"flex",alignItems:"center",gap:"7px",flexWrap:"wrap",marginBottom:"6px"});
+      const rankN=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"12px",color:"var(--muted)",flexShrink:"0"});
+      rankN.textContent=`#${fg.fgRank}`;
+      const nm=mk("div",{fontWeight:"700",fontSize:"14px",color:"var(--text)",flex:"1",minWidth:"0",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"});
+      nm.textContent=fg.name+(fg.team?` · ${fg.team}`:'');
+      const tierB=mk("div",{background:"transparent",border:`1px solid ${t.color}`,borderRadius:"6px",padding:"2px 7px",fontSize:"10px",fontWeight:"800",color:t.color,flexShrink:"0",fontFamily:"'Rajdhani',sans-serif"});
+      tierB.textContent=t.tier;
+      topLine.appendChild(rankN);topLine.appendChild(nm);topLine.appendChild(tierB);
       if(inBoard){
-        const cb=mk("div",{background:"rgba(96,192,255,.12)",border:"1px solid rgba(96,192,255,.35)",borderRadius:"5px",padding:"1px 6px",fontSize:"9px",fontWeight:"800",color:"#60c0ff",flexShrink:"0"});
-        cb.textContent="🎯 CONSENSUS";nameRow.appendChild(cb);
+        const cb=mk("div",{background:"rgba(96,192,255,.15)",border:"1px solid rgba(96,192,255,.4)",borderRadius:"5px",padding:"2px 6px",fontSize:"9px",fontWeight:"800",color:"#60c0ff",flexShrink:"0"});
+        cb.textContent="🎯 CONSENSUS";topLine.appendChild(cb);
       }
-      const stats=mk("div",{fontSize:"10px",color:"var(--muted)",marginTop:"2px"});
-      const barPct=Math.round(fg.barrelPct*100);
-      const ataPct=Math.round(fg.idealAtkAngPct*100);
-      const pullPct=Math.round(fg.pullPct*100);
-      stats.textContent=`EV ${fg.ev.toFixed(1)} · Barrel ${barPct}% · BatSpd ${fg.batSpd.toFixed(1)} · AtkAng ${ataPct}% · Pull ${pullPct}%`;
-      info.appendChild(nameRow);info.appendChild(stats);
-      const scoreDiv=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"14px",color:inBoard?"#60c0ff":"var(--text2)",flexShrink:"0"});
-      scoreDiv.textContent=`${Math.round(fg.fgScore*100)}`;
-      const scoreLabel=mk("div",{fontSize:"9px",color:"var(--muted)",textAlign:"right"});scoreLabel.textContent="/100";
-      const scoreWrap=mk("div",{textAlign:"right"});scoreWrap.appendChild(scoreDiv);scoreWrap.appendChild(scoreLabel);
-      row.appendChild(rankBadge);row.appendChild(info);row.appendChild(scoreWrap);
+      row.appendChild(topLine);
+      // Stat pills row — green if meets min, red if not
+      const pills=mk("div",{display:"flex",gap:"6px",flexWrap:"wrap"});
+      const statPill=(label,val,meets,display)=>{
+        const p=mk("div",{padding:"3px 8px",borderRadius:"6px",fontSize:"10px",fontWeight:"700",
+          background:meets?"rgba(82,194,120,.1)":"rgba(192,57,43,.08)",
+          border:`1px solid ${meets?"rgba(82,194,120,.35)":"rgba(192,57,43,.25)"}`,
+          color:meets?"var(--green2)":"#c0392b"});
+        p.textContent=`${label} ${display}`;pills.appendChild(p);
+      };
+      statPill("Barrel",fg.barrelPct,fg.barrelPct>=FG_MIN.barrelPct,`${Math.round(fg.barrelPct*100)}%`);
+      statPill("EV",fg.ev,fg.ev>=FG_MIN.ev,`${fg.ev.toFixed(1)}`);
+      statPill("BatSpd",fg.batSpd,fg.batSpd>=FG_MIN.batSpd,`${fg.batSpd.toFixed(1)}`);
+      statPill("AtkAng",fg.idealAtkAngPct,fg.idealAtkAngPct>=FG_MIN.idealAtkAngPct,`${Math.round(fg.idealAtkAngPct*100)}%`);
+      statPill("Pull",fg.pullPct,fg.pullPct>=FG_MIN.pullPct,`${Math.round(fg.pullPct*100)}%`);
+      // Score pill
+      const sp=mk("div",{padding:"3px 8px",borderRadius:"6px",fontSize:"10px",fontWeight:"700",background:"rgba(96,192,255,.08)",border:"1px solid rgba(96,192,255,.25)",color:"#60c0ff",marginLeft:"auto"});
+      sp.textContent=`Score ${Math.round(fg.fgScore*100)}/100`;pills.appendChild(sp);
+      row.appendChild(pills);
       panel.appendChild(row);
     });
     c.appendChild(panel);
@@ -1025,7 +1042,7 @@ function mkCard(bat,rank){
     <div style="flex:1;min-width:0;">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
         ${rank?`<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(96,192,255,.12);color:#60c0ff;flex-shrink:0">#${rank}</span>`:''}
-        ${fgMatch?`<span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:rgba(96,192,255,.15);color:#60c0ff;flex-shrink:0;border:1px solid rgba(96,192,255,.3)">⚡FG#${fgMatch.fgRank}</span>`:''}
+        ${fgMatch?`<span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${fgMatch.fgTier?.bg||'rgba(96,192,255,.15)'};color:${fgMatch.fgTier?.color||'#60c0ff'};flex-shrink:0;border:1px solid ${fgMatch.fgTier?.border||'rgba(96,192,255,.3)'}">⚡FG#${fgMatch.fgRank} ${(fgMatch.fgTier?.tier||'').replace(/[^a-zA-Z]/g,'').trim()}</span>`:''}
         <span style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:17px;color:var(--text)">${bat.name}</span>
         ${bat.hand?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${handCol}20;color:${handCol}">${bat.hand}</span>`:""}
         ${bat.lineupSpot?`<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:${lineupCol}20;color:${lineupCol}">Spot ${bat.lineupSpot}</span>`:""}
@@ -2122,6 +2139,9 @@ function buildBoardFromBP(players){
 }
 
 // ── FANGRAPHS IMPORT ─────────────────────────────────────────────────────
+// Minimum qualification thresholds for each metric
+const FG_MIN={barrelPct:.15,ev:90,batSpd:69,idealAtkAngPct:.55,pullPct:.40};
+
 function scoreFGBatter(b){
   // b.barrelPct / pullPct / idealAtkAngPct are raw decimals (0.15 = 15%)
   // b.ev / b.batSpd are mph
@@ -2129,12 +2149,26 @@ function scoreFGBatter(b){
     return val>=t[0]?1:val>=t[1]?.82:val>=t[2]?.60:val>=t[3]?.38:.12;
   }
   const evS  =pts(b.ev,          [93,91,89,87]);
-  const barS =pts(b.barrelPct,   [.15,.10,.06,.03]);
+  const barS =pts(b.barrelPct,   [.20,.15,.09,.04]);
   const spdS =pts(b.batSpd,      [78,76,73,70]);
-  const ataS =pts(b.idealAtkAngPct,[.78,.68,.57,.45]);
-  const pulS =pts(b.pullPct,     [.48,.42,.35,.28]);
+  const ataS =pts(b.idealAtkAngPct,[.80,.70,.60,.50]);
+  const pulS =pts(b.pullPct,     [.50,.44,.38,.32]);
   // Barrel 30% · EV 25% · BatSpd 20% · AttackAngle 15% · Pull 10%
   return barS*.30 + evS*.25 + spdS*.20 + ataS*.15 + pulS*.10;
+}
+
+function getFGTier(b){
+  const met=[
+    b.barrelPct>=FG_MIN.barrelPct,
+    b.ev>=FG_MIN.ev,
+    b.batSpd>=FG_MIN.batSpd,
+    b.idealAtkAngPct>=FG_MIN.idealAtkAngPct,
+    b.pullPct>=FG_MIN.pullPct,
+  ].filter(Boolean).length;
+  if(met===5)return{tier:"🔥 Elite",    met,color:"#5cb870",bg:"rgba(82,194,120,.12)", border:"rgba(82,194,120,.35)"};
+  if(met>=3) return{tier:"✅ Favorable",met,color:"#e8a830",bg:"rgba(200,146,42,.12)",border:"rgba(200,146,42,.35)"};
+  if(met>=2) return{tier:"⚠️ Average",  met,color:"#b89050",bg:"rgba(160,116,42,.08)",border:"rgba(160,116,42,.25)"};
+  return       {tier:"⛔ Risky",        met,color:"#c0392b",bg:"rgba(192,57,43,.08)", border:"rgba(192,57,43,.25)"};
 }
 
 function importFGCSV(file){
@@ -2157,13 +2191,15 @@ function importFGCSV(file){
       const idealAtkAngPct=parseFloat(r[ataKey])||0;
       const pullPct=parseFloat(r[pullKey])||0;
       const fgScore=scoreFGBatter({ev,barrelPct,batSpd,idealAtkAngPct,pullPct});
-      return{name,team,ev,barrelPct,batSpd,idealAtkAngPct,pullPct,fgScore};
-    }).filter(b=>b.fgScore>0.15); // drop rows with no meaningful data
+      const fgTier=getFGTier({ev,barrelPct,batSpd,idealAtkAngPct,pullPct});
+      return{name,team,ev,barrelPct,batSpd,idealAtkAngPct,pullPct,fgScore,fgTier};
+    }).filter(b=>b.ev>0); // drop empty rows
     if(!batters.length){toast('⚠️ No valid rows parsed — check column headers',5000);return;}
     batters.sort((a,b)=>b.fgScore-a.fgScore);
     S.fgBatters=batters.slice(0,20).map((b,i)=>({...b,fgRank:i+1}));
+    const byTier=t=>S.fgBatters.filter(b=>b.fgTier.tier===t).length;
     render();
-    toast(`✅ FanGraphs: top ${S.fgBatters.length} power hitters ranked`);
+    toast(`✅ FanGraphs: ${byTier("🔥 Elite")} Elite · ${byTier("✅ Favorable")} Favorable · ${byTier("⚠️ Average")} Avg · ${byTier("⛔ Risky")} Risky`);
   };
   reader.readAsText(file);
 }
