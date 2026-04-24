@@ -296,7 +296,7 @@ let W={
 const W_DEFAULT=JSON.parse(JSON.stringify(W));
 
 // ── STATE ─────────────────────────────────────────────────────────────────
-let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:"",batterStats:{},fgBatters:[]};
+let S={tab:"board",pitchers:[],batters:[],filter:"All",pitcherForm:false,slate:[],slateHandFilter:"All",slatePitcherFilter:"",batterStats:{},fgBatters:[],fgFilter:"All"};
 let BF={hand:"RHB",bvpSource:"Direct BvP (vs this pitcher)",windDir:"Calm / Dome",pitchType:"None / Skip",date:new Date().toISOString().slice(0,10),odds:""};
 let PF={hand:"RHP",platoonWeakness:"None / Unknown",primaryPitch:"None / Skip",weakLineupSpots:""};
 
@@ -876,7 +876,7 @@ function rTrack(c){
 
 // ── BOARD ─────────────────────────────────────────────────────────────────
 function rBoard(c){
-  // Filter pills
+  // Board filter pills (always shown)
   const fr=el("div","filter-row");
   const cnt={All:S.batters.length,"🔥 FIRE":0,"✅ LEAN":0,"⏭ SKIP":0};
   S.batters.forEach(b=>{if(b.grade?.tier)cnt[b.grade.tier]=(cnt[b.grade.tier]||0)+1;});
@@ -890,10 +890,26 @@ function rBoard(c){
   });
   c.appendChild(fr);
 
+  // Toolbar (always shown — FG import available even without board picks)
+  const tbRow=mk("div",{display:"flex",justifyContent:"flex-end",marginBottom:"10px",gap:"7px",flexWrap:"wrap"});
+  const bpTb=el("button","btn-sm",S.batters.length?"🅱️ Re-import BallparkPal":"🅱️ Import BallparkPal");
+  bpTb.onclick=()=>triggerBpImport();
+  tbRow.appendChild(bpTb);
+  const fgTb=el("button","btn-sm","⚡ Import FanGraphs");
+  fgTb.onclick=()=>triggerFGImport();
+  tbRow.appendChild(fgTb);
+  if(S.fgBatters.length){
+    const fgClear=el("button","btn-sm","✕ Clear FG");
+    fgClear.style.cssText="color:var(--muted);font-size:11px;";
+    fgClear.onclick=()=>{S.fgBatters=[];S.fgFilter="All";render();};
+    tbRow.appendChild(fgClear);
+  }
+  c.appendChild(tbRow);
+
   const all=S.filter==="All"?S.batters:S.batters.filter(b=>b.grade?.tier===S.filter);
   const sorted=[...all].filter(b=>b.grade).sort((a,b)=>(b.grade.total||0)-(a.grade.total||0));
 
-  // Slate summary
+  // Slate summary bar
   if(S.batters.length>0){
     const fires=S.batters.filter(b=>b.grade?.tier==="🔥 FIRE");
     const leans=S.batters.filter(b=>b.grade?.tier==="✅ LEAN");
@@ -911,39 +927,19 @@ function rBoard(c){
     c.appendChild(bar);
   }
 
+  // Board cards or empty state (no return — FG panel still renders below)
   if(sorted.length===0){
     const e=el("div","empty");
     e.innerHTML=`<div class="empty-icon">⚾</div><div class="empty-title">No picks yet</div><div class="empty-sub">Import BallparkPal to auto-grade today's top batters, or add manually</div>`;
-    const bpBtn=el("button","btn-primary","🅱️ Import BallparkPal");
-    bpBtn.style.marginTop="16px";
-    bpBtn.onclick=()=>triggerBpImport();
-    e.appendChild(bpBtn);
-    const or=mk("div",{color:"var(--muted)",fontSize:"12px",margin:"10px 0"});or.textContent="or";
-    e.appendChild(or);
     const btn=el("button","btn-outline",S.pitchers.length?"＋ Add Manually":"⚾ Add Pitchers First");
     btn.onclick=()=>{S.tab=S.pitchers.length?"add":"pitchers";render();};
-    e.appendChild(btn);c.appendChild(e);return;
+    e.appendChild(btn);
+    c.appendChild(e);
+  } else {
+    sorted.forEach((b,i)=>c.appendChild(mkCard(b,i+1)));
   }
 
-  // Board toolbar
-  const tbRow=mk("div",{display:"flex",justifyContent:"flex-end",marginBottom:"10px",gap:"7px",flexWrap:"wrap"});
-  const bpTb=el("button","btn-sm","🅱️ Re-import BallparkPal");
-  bpTb.onclick=()=>triggerBpImport();
-  tbRow.appendChild(bpTb);
-  const fgTb=el("button","btn-sm","⚡ Import FanGraphs");
-  fgTb.onclick=()=>triggerFGImport();
-  tbRow.appendChild(fgTb);
-  if(S.fgBatters.length){
-    const fgClear=el("button","btn-sm","✕ Clear FG");
-    fgClear.style.cssText="color:var(--muted);font-size:11px;";
-    fgClear.onclick=()=>{S.fgBatters=[];render();};
-    tbRow.appendChild(fgClear);
-  }
-  c.appendChild(tbRow);
-
-  sorted.forEach((b,i)=>c.appendChild(mkCard(b,i+1)));
-
-  // FanGraphs top 20 panel
+  // FanGraphs top 20 panel (renders even without board picks)
   if(S.fgBatters.length){
     const boardNames=new Set(S.batters.map(b=>normName(b.name)));
     const panel=mk("div",{background:"var(--card2)",border:"1px solid var(--border)",borderRadius:"16px",padding:"16px",marginTop:"16px"});
@@ -951,31 +947,51 @@ function rBoard(c){
     const ptitle=mk("div",{fontFamily:"'Rajdhani',sans-serif",fontWeight:"700",fontSize:"17px",color:"var(--text)",marginBottom:"3px"});
     ptitle.textContent="⚡ FanGraphs Power Rankings (2-wk)";
     panel.appendChild(ptitle);
-    // Threshold legend
     const legWrap=mk("div",{fontSize:"10px",color:"var(--muted)",marginBottom:"10px",lineHeight:"1.6"});
     legWrap.innerHTML=`Min: <span style="color:var(--text2)">Barrel≥15%</span> · <span style="color:var(--text2)">EV≥90</span> · <span style="color:var(--text2)">BatSpd≥69</span> · <span style="color:var(--text2)">AtkAng≥55%</span> · <span style="color:var(--text2)">Pull≥40%</span>`;
     panel.appendChild(legWrap);
-    // Summary tier counts
-    const metaRow=mk("div",{display:"flex",gap:"6px",marginBottom:"12px",flexWrap:"wrap"});
+
+    // Filter toggle pills (clickable — active pill highlighted)
     const byTier=t=>S.fgBatters.filter(b=>b.fgTier.tier===t).length;
     const consensus=S.fgBatters.filter(fg=>boardNames.has(normName(fg.name)));
-    [
-      {l:`🔥 Elite ${byTier("🔥 Elite")}`,c:"#5cb870"},
-      {l:`✅ Favorable ${byTier("✅ Favorable")}`,c:"#e8a830"},
-      {l:`⚠️ Average ${byTier("⚠️ Average")}`,c:"#b89050"},
-      {l:`⛔ Risky ${byTier("⛔ Risky")}`,c:"#c0392b"},
-      {l:`🎯 Consensus ${consensus.length}`,c:"#60c0ff"},
-    ].forEach(({l,c:col})=>{
-      const badge=mk("div",{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"7px",padding:"3px 9px",fontSize:"10px",fontWeight:"700",color:col});
-      badge.textContent=l;metaRow.appendChild(badge);
+    const filterRow=mk("div",{display:"flex",gap:"6px",marginBottom:"12px",flexWrap:"wrap"});
+    const filters=[
+      {key:"All",          l:`All ${S.fgBatters.length}`,    c:"var(--text2)"},
+      {key:"🔥 Elite",     l:`🔥 Elite ${byTier("🔥 Elite")}`,    c:"#5cb870"},
+      {key:"✅ Favorable", l:`✅ Favorable ${byTier("✅ Favorable")}`,c:"#e8a830"},
+      {key:"⚠️ Average",  l:`⚠️ Average ${byTier("⚠️ Average")}`, c:"#b89050"},
+      {key:"⛔ Risky",     l:`⛔ Risky ${byTier("⛔ Risky")}`,      c:"#c0392b"},
+      {key:"🎯 Consensus", l:`🎯 Consensus ${consensus.length}`,    c:"#60c0ff"},
+    ];
+    filters.forEach(({key,l,c:col})=>{
+      const active=S.fgFilter===key;
+      const pill=mk("div",{
+        background:active?`${col}22`:"var(--card)",
+        border:`1px solid ${active?col:"var(--border)"}`,
+        borderRadius:"7px",padding:"4px 10px",fontSize:"10px",fontWeight:"700",
+        color:active?col:"var(--muted)",cursor:"pointer",userSelect:"none"
+      });
+      pill.textContent=l;
+      pill.onclick=()=>{S.fgFilter=S.fgFilter===key?"All":key;render();};
+      filterRow.appendChild(pill);
     });
-    panel.appendChild(metaRow);
-    // Each batter row
-    S.fgBatters.forEach(fg=>{
+    panel.appendChild(filterRow);
+
+    // Filtered batter list
+    const visible=S.fgBatters.filter(fg=>{
+      if(S.fgFilter==="All")return true;
+      if(S.fgFilter==="🎯 Consensus")return boardNames.has(normName(fg.name));
+      return fg.fgTier.tier===S.fgFilter;
+    });
+    if(visible.length===0){
+      const none=mk("div",{textAlign:"center",color:"var(--muted)",padding:"20px",fontSize:"13px"});
+      none.textContent="No batters match this filter.";
+      panel.appendChild(none);
+    }
+    visible.forEach(fg=>{
       const inBoard=boardNames.has(normName(fg.name));
       const t=fg.fgTier;
       const row=mk("div",{background:t.bg,border:`1px solid ${t.border}`,borderRadius:"12px",padding:"10px 12px",marginBottom:"7px"});
-      // Top line: rank + name + tier badge + consensus
       const topLine=mk("div",{display:"flex",alignItems:"center",gap:"7px",flexWrap:"wrap",marginBottom:"6px"});
       const rankN=mk("div",{fontFamily:"'JetBrains Mono',monospace",fontWeight:"700",fontSize:"12px",color:"var(--muted)",flexShrink:"0"});
       rankN.textContent=`#${fg.fgRank}`;
@@ -989,23 +1005,21 @@ function rBoard(c){
         cb.textContent="🎯 CONSENSUS";topLine.appendChild(cb);
       }
       row.appendChild(topLine);
-      // Stat pills row — green if meets min, red if not
       const pills=mk("div",{display:"flex",gap:"6px",flexWrap:"wrap"});
-      const statPill=(label,val,meets,display)=>{
+      const statPill=(label,meets,display)=>{
         const p=mk("div",{padding:"3px 8px",borderRadius:"6px",fontSize:"10px",fontWeight:"700",
           background:meets?"rgba(82,194,120,.1)":"rgba(192,57,43,.08)",
           border:`1px solid ${meets?"rgba(82,194,120,.35)":"rgba(192,57,43,.25)"}`,
           color:meets?"var(--green2)":"#c0392b"});
         p.textContent=`${label} ${display}`;pills.appendChild(p);
       };
-      statPill("Barrel",fg.barrelPct,fg.barrelPct>=FG_MIN.barrelPct,`${Math.round(fg.barrelPct*100)}%`);
-      statPill("EV",fg.ev,fg.ev>=FG_MIN.ev,`${fg.ev.toFixed(1)}`);
-      statPill("BatSpd",fg.batSpd,fg.batSpd>=FG_MIN.batSpd,`${fg.batSpd.toFixed(1)}`);
-      statPill("AtkAng",fg.idealAtkAngPct,fg.idealAtkAngPct>=FG_MIN.idealAtkAngPct,`${Math.round(fg.idealAtkAngPct*100)}%`);
-      statPill("Pull",fg.pullPct,fg.pullPct>=FG_MIN.pullPct,`${Math.round(fg.pullPct*100)}%`);
-      // Score pill
+      statPill("Barrel",fg.barrelPct>=FG_MIN.barrelPct,`${Math.round(fg.barrelPct*100)}%`);
+      statPill("EV",fg.ev>=FG_MIN.ev,`${fg.ev.toFixed(1)}`);
+      statPill("BatSpd",fg.batSpd>=FG_MIN.batSpd,`${fg.batSpd.toFixed(1)}`);
+      statPill("AtkAng",fg.idealAtkAngPct>=FG_MIN.idealAtkAngPct,`${Math.round(fg.idealAtkAngPct*100)}%`);
+      statPill("Pull",fg.pullPct>=FG_MIN.pullPct,`${Math.round(fg.pullPct*100)}%`);
       const sp=mk("div",{padding:"3px 8px",borderRadius:"6px",fontSize:"10px",fontWeight:"700",background:"rgba(96,192,255,.08)",border:"1px solid rgba(96,192,255,.25)",color:"#60c0ff",marginLeft:"auto"});
-      sp.textContent=`Score ${Math.round(fg.fgScore*100)}/100`;pills.appendChild(sp);
+      sp.textContent=`${Math.round(fg.fgScore*100)}/100`;pills.appendChild(sp);
       row.appendChild(pills);
       panel.appendChild(row);
     });
