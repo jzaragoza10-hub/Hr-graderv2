@@ -4,6 +4,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <title>⚾ HR Grader</title>
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
@@ -1515,6 +1518,12 @@ function mkPitForm(){
 
 // ── SETTINGS / WEIGHTS ────────────────────────────────────────────────────
 function rWeights(c){
+  // Build version banner
+  const BUILD="2026-04-24 r14";
+  const verCard=mk("div",{background:"var(--card2)",border:"1px solid var(--border)",borderRadius:"12px",padding:"10px 14px",marginBottom:"12px",display:"flex",alignItems:"center",gap:"10px"});
+  verCard.innerHTML=`<span style="font-size:11px;color:var(--muted)">Build</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);flex:1">${BUILD}</span><button onclick="location.reload(true)" style="background:var(--card);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-size:12px;padding:4px 10px;cursor:pointer;">🔄 Force Refresh</button>`;
+  c.appendChild(verCard);
+
   // Claude API Key
   const apiCard=el("div","card");
   apiCard.innerHTML=`<div style="font-family:'Rajdhani',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:4px">📷 Image Scan (Claude API)</div><div style="font-size:11px;color:var(--muted);margin-bottom:12px">Enter your Anthropic API key to enable scanning screenshots for auto-fill. Key is stored locally on your device only.</div>`;
